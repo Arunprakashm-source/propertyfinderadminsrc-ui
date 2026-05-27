@@ -20,6 +20,14 @@ import ListingAmenitiesDetail from "./pages/ListingManagement/ListingAmenities/L
 import DeveloperAccView from "./pages/UserManagement/Developer/DeveloperAccView";
 import ReportManagement from "./pages/ReportManagement/ReportManagement";
 import ReportManagementDetail from "./pages/ReportManagement/ReportManagementDetail";
+import AboutUsSettings from "./pages/CMSManagement/AboutUs/AboutUsSettings";
+import TeamManagement from "./pages/CMSManagement/Team/TeamManagement";
+import TeamMemberDetail from "./pages/CMSManagement/Team/TeamMemberDetail";
+import ContactUsSettings from "./pages/CMSManagement/ContactUs/ContactUsSettings";
+import SitemapSettings from "./pages/CMSManagement/Sitemap/SitemapSettings";
+import LegalPagesSettings from "./pages/CMSManagement/Legal/LegalPagesSettings";
+import BlogManagement from "./pages/CMSManagement/Blog/BlogManagement";
+import BlogDetailSettings from "./pages/CMSManagement/Blog/BlogDetailSettings";
 function App() {
 
   return (
@@ -46,6 +54,14 @@ function App() {
               <Route path="/listingamenitiesdetail" element={<ListingAmenitiesDetail />} />
               <Route path="/reportsmanagement" element={<ReportManagement />} />
               <Route path="/reportsmanagementdetail" element={<ReportManagementDetail />} />
+              <Route path="/cmsaboutus" element={<AboutUsSettings />} />
+              <Route path="/cmsteam" element={<TeamManagement />} />
+              <Route path="/cmsteamdetail" element={<TeamMemberDetail />} />
+              <Route path="/cmscontactus" element={<ContactUsSettings />} />
+              <Route path="/cmssitemap" element={<SitemapSettings />} />
+              <Route path="/cmslegal" element={<LegalPagesSettings />} />
+              <Route path="/cmsblogs" element={<BlogManagement />} />
+              <Route path="/cmsblogdetail" element={<BlogDetailSettings />} />
             </Route>
             <Route path="/" element={<Login />} />
           </Routes>
