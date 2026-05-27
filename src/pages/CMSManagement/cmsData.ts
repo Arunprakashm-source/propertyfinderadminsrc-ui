@@ -1,0 +1,332 @@
+export interface SeoFields {
+    metaTitle: string;
+    metaDescription: string;
+    metaKeywords: string;
+}
+
+export interface AboutUsSettings {
+    heroHeadline: string;
+    heroSubheadline: string;
+    bannerText: string;
+    businessSectionTitle: string;
+    businessParagraph1: string;
+    businessParagraph2: string;
+    businessCtaPrimaryLabel: string;
+    businessCtaPrimaryUrl: string;
+    businessCtaSecondaryLabel: string;
+    businessCtaSecondaryUrl: string;
+    stat1Value: string;
+    stat1Description: string;
+    stat2Value: string;
+    stat2Description: string;
+    stat3Value: string;
+    stat3Description: string;
+    ctaHeadline: string;
+    ctaSubheadline: string;
+    ctaButtonLabel: string;
+    ctaButtonUrl: string;
+    seo: SeoFields;
+}
+
+export interface SuccessTimelineEntry {
+    id: number;
+    date: string;
+    title: string;
+    description: string;
+    displayOrder: number;
+}
+
+export interface TeamPageSettings {
+    pageTitle: string;
+    pageSubtitle: string;
+    itemsPerPage: number;
+    seo: SeoFields;
+}
+
+export interface TeamMember {
+    id: number;
+    fullName: string;
+    jobTitle: string;
+    profileImage: string;
+    displayOrder: number;
+    isActive: boolean;
+}
+
+export interface ContactPageSettings {
+    heroTitle: string;
+    heroSubtitle: string;
+    sectionTitle: string;
+    sectionSubtext: string;
+    email: string;
+    phone: string;
+    officeAddress: string;
+    mapUrl: string;
+    facebookUrl: string;
+    instagramUrl: string;
+    twitterUrl: string;
+    linkedinUrl: string;
+    seo: SeoFields;
+}
+
+export interface OfficeLocation {
+    id: number;
+    city: string;
+    country: string;
+    locationType: string;
+    address: string;
+    mapUrl: string;
+    phone: string;
+    email: string;
+    displayOrder: number;
+    isActive: boolean;
+}
+
+export interface ContactSubmission {
+    id: number;
+    name: string;
+    email: string;
+    phone: string;
+    subject: string;
+    comments: string;
+    submittedAt: string;
+}
+
+export interface SitemapCategory {
+    id: string;
+    label: string;
+}
+
+export interface SitemapLink {
+    id: number;
+    label: string;
+    url: string;
+    column: 1 | 2 | 3;
+    displayOrder: number;
+}
+
+export interface SitemapSection {
+    id: number;
+    title: string;
+    categoryId: string;
+    location: string;
+    links: SitemapLink[];
+    isActive: boolean;
+}
+
+export interface LegalDocument {
+    id: string;
+    tabLabel: string;
+    documentTitle: string;
+    content: string;
+    country: string;
+    language: string;
+    isActive: boolean;
+    displayOrder: number;
+}
+
+export interface BlogCategory {
+    id: number;
+    name: string;
+    slug: string;
+}
+
+export interface BlogTag {
+    id: number;
+    name: string;
+    slug: string;
+}
+
+export interface BlogPost {
+    id: number;
+    title: string;
+    slug: string;
+    excerpt: string;
+    content: string;
+    coverImage: string;
+    categoryId: number;
+    tagIds: number[];
+    authorName: string;
+    readTime: string;
+    publishDate: string;
+    isFeatured: boolean;
+    isPublished: boolean;
+    displayOrder: number;
+    seo: SeoFields;
+}
+
+export interface BlogPageSettings {
+    pageTitle: string;
+    pageSubtitle: string;
+    featuredSectionTitle: string;
+    featuredSectionSubtitle: string;
+    itemsPerPage: number;
+    showSearch: boolean;
+    showCategoryFilters: boolean;
+    showRecentPostsSidebar: boolean;
+    enableComments: boolean;
+    seo: SeoFields;
+}
+
+export const SITEMAP_CATEGORIES: SitemapCategory[] = [
+    { id: "buy", label: "Buy" },
+    { id: "rent", label: "Rent" },
+    { id: "commercial-buy", label: "Commercial Buy" },
+    { id: "commercial-rent", label: "Commercial Rent" },
+];
+
+export const teamMembersSeed: TeamMember[] = [
+    { id: 1, fullName: "William James", jobTitle: "Senior Property Consultant", profileImage: "", displayOrder: 1, isActive: true },
+    { id: 2, fullName: "Sarah Ahmed", jobTitle: "Property Advisor", profileImage: "", displayOrder: 2, isActive: true },
+    { id: 3, fullName: "Mohamed Ali", jobTitle: "Sales Manager", profileImage: "", displayOrder: 3, isActive: true },
+];
+
+export const officeLocationsSeed: OfficeLocation[] = [
+    {
+        id: 1,
+        city: "Istanbul",
+        country: "Turkey",
+        locationType: "Tech hub",
+        address: "Maslak, Maslak Mah., Ahi Evran Cd. No:6 D:3, 42, D:D Blok, 34398 Sarıyer/İstanbul",
+        mapUrl: "https://maps.google.com",
+        phone: "+90 212 924 10 24",
+        email: "info@propertyfinder.com.tr",
+        displayOrder: 1,
+        isActive: true,
+    },
+];
+
+export const contactSubmissionsSeed: ContactSubmission[] = [
+    {
+        id: 1,
+        name: "John Doe",
+        email: "john@example.com",
+        phone: "+971 50 123 4567",
+        subject: "General Inquiry",
+        comments: "I would like to know more about your services.",
+        submittedAt: "2025-05-20",
+    },
+];
+
+export const legalDocumentsSeed: LegalDocument[] = [
+    { id: "terms", tabLabel: "Terms of use", documentTitle: "Terms & Conditions for Users", content: "", country: "UAE", language: "EN", isActive: true, displayOrder: 1 },
+    { id: "community", tabLabel: "Community guidelines", documentTitle: "Community Guidelines", content: "", country: "UAE", language: "EN", isActive: true, displayOrder: 2 },
+    { id: "api", tabLabel: "API Terms of use", documentTitle: "API Terms of Use", content: "", country: "UAE", language: "EN", isActive: true, displayOrder: 3 },
+    { id: "privacy", tabLabel: "Privacy Policy", documentTitle: "Privacy Policy", content: "", country: "UAE", language: "EN", isActive: true, displayOrder: 4 },
+    { id: "cookie", tabLabel: "Cookie Policy", documentTitle: "Cookie Policy", content: "", country: "UAE", language: "EN", isActive: true, displayOrder: 5 },
+];
+
+export const blogCategoriesSeed: BlogCategory[] = [
+    { id: 1, name: "Real Estate News", slug: "real-estate-news" },
+    { id: 2, name: "Interior Design", slug: "interior-design" },
+    { id: 3, name: "Community Guides", slug: "community-guides" },
+];
+
+export const blogTagsSeed: BlogTag[] = [
+    { id: 1, name: "Dubai", slug: "dubai" },
+    { id: 2, name: "Investment", slug: "investment" },
+    { id: 3, name: "Tips", slug: "tips" },
+    { id: 4, name: "Lifestyle", slug: "lifestyle" },
+];
+
+export const blogPostsSeed: BlogPost[] = [
+    {
+        id: 1,
+        title: "It All Starts Here",
+        slug: "it-all-starts-here",
+        excerpt: "Everything you need to know before buying your next home.",
+        content: "",
+        coverImage: "",
+        categoryId: 1,
+        tagIds: [1, 2, 3],
+        authorName: "Admin",
+        readTime: "5 min read",
+        publishDate: "2026-05-27",
+        isFeatured: true,
+        isPublished: true,
+        displayOrder: 1,
+        seo: {
+            metaTitle: "It All Starts Here | Blog",
+            metaDescription: "A complete guide for new property buyers.",
+            metaKeywords: "property, blog, buy home",
+        },
+    },
+];
+
+export const sitemapSectionsSeed: SitemapSection[] = [
+    {
+        id: 1,
+        title: "Terms & Conditions For Users",
+        categoryId: "buy",
+        location: "Umm Al Quwain",
+        links: [
+            { id: 1, label: "Apartments for sale", url: "/buy/apartments", column: 1, displayOrder: 1 },
+            { id: 2, label: "Villas for sale", url: "/buy/villas", column: 1, displayOrder: 2 },
+            { id: 3, label: "Townhouses for sale", url: "/buy/townhouses", column: 2, displayOrder: 1 },
+        ],
+        isActive: true,
+    },
+];
+
+export const defaultAboutUsSettings: AboutUsSettings = {
+    heroHeadline: "To motivate and inspire people to get living the life they deserve.",
+    heroSubheadline: "When you look for a property, it's not just a home you see, it's a better future.",
+    bannerText: "★ UNLOCK YOUR POTENTIAL",
+    businessSectionTitle: "How can we help for your business?",
+    businessParagraph1: "We help businesses connect with the right audience through property listings and insights.",
+    businessParagraph2: "Our platform supports agents, developers, and agencies to grow their reach.",
+    businessCtaPrimaryLabel: "Meet our team",
+    businessCtaPrimaryUrl: "/our-team",
+    businessCtaSecondaryLabel: "Read more",
+    businessCtaSecondaryUrl: "/about",
+    stat1Value: "100%",
+    stat1Description: "Commitment to verified listings",
+    stat2Value: "90%",
+    stat2Description: "Customer satisfaction rate",
+    stat3Value: "10k+",
+    stat3Description: "Properties listed across regions",
+    ctaHeadline: "Ready to Invest or Move?",
+    ctaSubheadline: "Be the first to get the latest news and opportunities in the marketplace.",
+    ctaButtonLabel: "Discover Properties",
+    ctaButtonUrl: "/buy",
+    seo: { metaTitle: "About Us | Property Finder", metaDescription: "Learn about Property Finder", metaKeywords: "about, property finder" },
+};
+
+export const defaultTeamPageSettings: TeamPageSettings = {
+    pageTitle: "Our Team",
+    pageSubtitle: "Meet the people behind Property Finder",
+    itemsPerPage: 24,
+    seo: { metaTitle: "Our Team | Property Finder", metaDescription: "Meet our team", metaKeywords: "team, property finder" },
+};
+
+export const defaultContactPageSettings: ContactPageSettings = {
+    heroTitle: "We want to hear from you",
+    heroSubtitle: "Send us a message, give us a call, or better still visit us.",
+    sectionTitle: "Let's get in touch",
+    sectionSubtext: "Contact if you have any queries",
+    email: "info@propertyfinder.ae",
+    phone: "+971 4 558 0000",
+    officeAddress: "Media City, Shatha Tower, 1505, Dubai, UAE",
+    mapUrl: "https://maps.google.com",
+    facebookUrl: "https://facebook.com",
+    instagramUrl: "https://instagram.com",
+    twitterUrl: "https://twitter.com",
+    linkedinUrl: "https://linkedin.com",
+    seo: { metaTitle: "Contact Us | Property Finder", metaDescription: "Get in touch with Property Finder", metaKeywords: "contact, property finder" },
+};
+
+export const defaultBlogPageSettings: BlogPageSettings = {
+    pageTitle: "Browse our blogs",
+    pageSubtitle: "Insights and updates from the Property Finder team",
+    featuredSectionTitle: "Featured Article",
+    featuredSectionSubtitle: "Top picks from our editors",
+    itemsPerPage: 15,
+    showSearch: true,
+    showCategoryFilters: true,
+    showRecentPostsSidebar: true,
+    enableComments: true,
+    seo: {
+        metaTitle: "Blogs | Property Finder",
+        metaDescription: "Read the latest property insights and updates.",
+        metaKeywords: "blog, property, insights",
+    },
+};

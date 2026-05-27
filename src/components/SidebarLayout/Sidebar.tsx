@@ -19,14 +19,13 @@ const navItems: NavItem[] = [
     {
         icon: AllocationIcon,
         path: "/user",
-        label: "User Management",
+        label: "Roles & Privileges",
         hasDropdown: true,
         subItems: [
             { path: "/useraccount", label: "User Account" },
             { path: "/developeraccount", label: "Developer Account" },
             { path: "/agencyaccount", label: "Agency Account" },
             { path: "/agentaccount", label: "Agent Account" },
-            { path: "/rolesprivileges", label: "Roles & Privileges" }
         ]
     },
     {
@@ -35,7 +34,6 @@ const navItems: NavItem[] = [
         label: "Listing Management",
         hasDropdown: true,
         subItems: [
-            { path: "/listing", label: "Listings" },
             { path: "/listingproperty", label: "Listing Properties" },
             { path: "/listingproject", label: "Listing Projects" },
             { path: "/listingamenities", label: "Listing Amenities" },
@@ -49,8 +47,13 @@ const navItems: NavItem[] = [
         label: "CMS Management",
         hasDropdown: true,
         subItems: [
+            { path: "/cmsaboutus", label: "About Us" },
+            { path: "/cmsteam", label: "Our Team" },
+            { path: "/cmscontactus", label: "Contact Us" },
+            { path: "/cmsblogs", label: "Blogs" },
+            { path: "/cmssitemap", label: "Sitemap" },
+            { path: "/cmslegal", label: "Legal Pages" },
             { path: "/banner", label: "Banner Management" },
-            { path: "/helppage", label: "Help Pages" },
             { path: "/seosetting", label: "SEO Settings" },
         ]
     },
@@ -216,7 +219,11 @@ function Sidebar() {
                                                                     ? ["/listingproject", "/listingprojectdetail"]
                                                                     : subItem.path === "/listingamenities"
                                                                         ? ["/listingamenities", "/listingamenitiesdetail"]
-                                                                        : [subItem.path];
+                                                                        : subItem.path === "/cmsteam"
+                                                                            ? ["/cmsteam", "/cmsteamdetail"]
+                                                                            : subItem.path === "/cmsblogs"
+                                                                                ? ["/cmsblogs", "/cmsblogdetail"]
+                                                                                : [subItem.path];
                                         const isSubActive = subItemActivePaths.some(
                                             (p) => matchPath({ path: p, end: true }, location.pathname) != null
                                         );
