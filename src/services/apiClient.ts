@@ -11,6 +11,7 @@ type RequestOptions = {
   headers?: Record<string, string>;
   auth?: boolean;
   signal?: AbortSignal;
+  retryOnAuthFail?: boolean;
 };
 
 export class ApiError extends Error {
@@ -40,7 +41,7 @@ const request = async <T>(
   path: string,
   options: RequestOptions = {}
 ): Promise<T> => {
-  const { body, headers = {}, auth = true, signal } = options;
+  const { body, headers = {}, auth = true, signal, retryOnAuthFail = true } = options;
 
   const requestHeaders: Record<string, string> = {
     Accept: "application/json",
@@ -82,6 +83,48 @@ const request = async <T>(
   const ok = response.ok && payload?.status !== false;
 
   if (!ok) {
+    if (response.status === 401 && auth && retryOnAuthFail) {
+      const refreshToken = authStorage.getRefreshToken();
+      if (refreshToken) {
+        try {
+          const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh`, {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ refreshToken }),
+            signal,
+          });
+          const refreshPayload = await parseResponse<ApiEnvelope<{
+            tokens?: { accessToken?: string; refreshToken?: string };
+            admin?: unknown;
+          }>>(refreshResponse);
+          const refreshedTokens = refreshPayload?.data?.tokens;
+          if (
+            refreshResponse.ok &&
+            refreshPayload?.status !== false &&
+            refreshedTokens?.accessToken &&
+            refreshedTokens?.refreshToken
+          ) {
+            authStorage.setTokens(
+              refreshedTokens.accessToken,
+              refreshedTokens.refreshToken
+            );
+            if (refreshPayload?.data?.admin) {
+              authStorage.setAdminUser(refreshPayload.data.admin);
+            }
+            return request<T>(method, path, {
+              ...options,
+              retryOnAuthFail: false,
+            });
+          }
+        } catch {
+          // Ignore and fall through to clear session + throw original auth error.
+        }
+      }
+      authStorage.clear();
+    }
     throw new ApiError(
       message,
       response.status,

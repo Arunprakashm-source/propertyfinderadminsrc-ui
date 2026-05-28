@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { NavLink, Link, useLocation, matchPath } from "react-router-dom";
+import { NavLink, Link, useLocation, matchPath, useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogOverlay } from "../Ui/Dialog";
 import { HamburgerMenuIcon, Cross2Icon } from "@radix-ui/react-icons";
 import { DashboardIcon, AgentIcon, AllocationIcon, AllocationWhiteIcon, ListingIcon, LeadsIcon, LeadsWhiteIcon, SubscriptionIcon, ProfileIcon, LogoutIcon, DownArrowIcon } from '../../assets/icons'
 import logo from '../../assets/img/logo.png'
+import { authService } from "../../services/authService";
+import Loader from "../Loader/loader";
 
 type NavItem = {
     icon: typeof DashboardIcon;
@@ -75,6 +77,8 @@ const navItems: NavItem[] = [
 function Sidebar() {
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({});
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
+    const navigate = useNavigate();
 
     // const toggleDropdown = (path: string) => {
     //     setOpenDropdowns(prev => ({ ...prev, [path]: !prev[path] }));
@@ -123,7 +127,13 @@ function Sidebar() {
         setOpenDropdowns(newDropdowns);
     }, [location.pathname]);
     const SidebarContent = ({ isMobile = false }: { isMobile?: boolean }) => (
-        <div className="flex flex-col h-full bg-[#FFF] shadow-md md:w-[350px] xl:w-[310px] lg:w-[280px] w-[320px] lg:p-[30px_30px_30px_30px]  p-[20px_20px_20px_20px] sidebar overflow-hidden">
+        <div className="relative flex flex-col h-full bg-[#FFF] shadow-md md:w-[350px] xl:w-[310px] lg:w-[280px] w-[320px] lg:p-[30px_30px_30px_30px]  p-[20px_20px_20px_20px] sidebar overflow-hidden">
+            {isLoggingOut ? (
+                <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center gap-2 bg-white/90">
+                    <Loader size={72} margin={0} />
+                    <p className="text-[14px] font-[Medium] text-[#707070]">Signing out…</p>
+                </div>
+            ) : null}
             <div className="mb-[40px] flex justify-between items-center w-full sidebar_logo">
                 <Link
                     to="/dashboard"
@@ -244,6 +254,27 @@ function Sidebar() {
                                 </div>
                             )}
                         </div>
+                    ) : item.label === "Logout" ? (
+                        <button
+                            key={index}
+                            type="button"
+                            className={`flex w-full gap-[10px] items-center justify-start rounded-[15px] p-[6px] transition hover:bg-[#DFD3EB] focus:outline-none focus:border-none focus:shadow-none bg-transparent`}
+                            onClick={async () => {
+                                try {
+                                    setIsLoggingOut(true);
+                                    await authService.logout();
+                                } finally {
+                                    setIsDrawerOpen(false);
+                                    navigate("/");
+                                    setIsLoggingOut(false);
+                                }
+                            }}
+                        >
+                            <div className="flex items-center justify-center w-[46px] h-[46px] rounded-[12px] bg-[#fff] shadow-[0px_1px_4px_rgba(0,0,0,0.16)]">
+                                <item.icon stroke="#707070" fill="#707070" />
+                            </div>
+                            <p className="text-[14px] font-[Medium]">Logout</p>
+                        </button>
                     ) : (
                         <NavLink
                             key={index}

@@ -28,6 +28,7 @@ import SitemapSettings from "./pages/CMSManagement/Sitemap/SitemapSettings";
 import LegalPagesSettings from "./pages/CMSManagement/Legal/LegalPagesSettings";
 import BlogManagement from "./pages/CMSManagement/Blog/BlogManagement";
 import BlogDetailSettings from "./pages/CMSManagement/Blog/BlogDetailSettings";
+import ProtectedRoute from "./components/ProtectedRoute";
 function App() {
 
   return (
@@ -35,7 +36,7 @@ function App() {
       <div className="whole_app">
         <BrowserRouter basename="/admin">
           <Routes>
-            <Route element={<MainIndex />}>
+            <Route element={<ProtectedRoute><MainIndex /></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/useraccount" element={<UserAccount />} />
               <Route path="/useraccountdetail" element={<UserAccountDetail />} />
