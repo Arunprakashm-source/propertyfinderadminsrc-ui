@@ -7,6 +7,7 @@ import UserAccount from "./pages/UserManagement/User/UserAccount";
 import UserAccountDetail from "./pages/UserManagement/User/UserAccountDetail";
 import AgencyAccount from "./pages/UserManagement/Agency/AgencyAccount";
 import AgencyAccountDetail from "./pages/UserManagement/Agency/AgencyAccountDetail";
+import AgencyAccView from "./pages/UserManagement/Agency/AgencyAccView";
 import DeveloperAccount from "./pages/UserManagement/Developer/DeveloperAccount";
 import DeveloperAccDetail from "./pages/UserManagement/Developer/DeveloperAccDetails";
 import AgentAccount from "./pages/UserManagement/Agent/AgentAccount";
@@ -44,6 +45,7 @@ function App() {
               <Route path="/developeraccountview" element={<DeveloperAccView />} />
               <Route path="/developeraccountdetail" element={<DeveloperAccDetail />} />
               <Route path="/agencyaccount" element={<AgencyAccount />} />
+              <Route path="/agencyaccountview" element={<AgencyAccView />} />
               <Route path="/agencyaccountdetail" element={<AgencyAccountDetail />} />
               <Route path="/agentaccount" element={<AgentAccount />} />
               <Route path="/agentaccountdetail" element={<AgentAccountDetail />} />

@@ -220,7 +220,7 @@ function Sidebar() {
                                                 : subItem.path === "/developeraccount"
                                                     ? ["/developeraccount", "/developeraccountdetail", "/developeraccountview"]
                                                     : subItem.path === "/agencyaccount"
-                                                        ? ["/agencyaccount", "/agencyaccountdetail"]
+                                                        ? ["/agencyaccount", "/agencyaccountdetail", "/agencyaccountview"]
                                                         : subItem.path === "/agentaccount"
                                                             ? ["/agentaccount", "/agentaccountdetail"]
                                                             : subItem.path === "/listingproperty"

@@ -12,12 +12,14 @@ import Header from "../../../components/Header/Header";
 import Pagenation from "../../../components/Pagenation/Pagenation";
 import Loader from "../../../components/Loader/loader";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 import InviteDeveloperModal from "./InviteDevModal";
 import { developersService } from "../../../services/developersService";
 import { apiClient, getApiErrorMessage } from "../../../services/apiClient";
 import type { AdminDeveloperListItem, SupportedUrlsResponse } from "../../../types/api";
+import { useToast } from "../../../context/ToastContext";
 
-const tableGrid = "grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr_1fr]";
+const tableGrid = "grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1.25fr_1fr_1fr]";
 const ITEMS_PER_PAGE = 10;
 const SEARCH_DEBOUNCE_MS = 400;
 
@@ -85,6 +87,17 @@ const formatCountry = (developer: AdminDeveloperListItem) => {
   return developer.nationality.name || developer.nationality.code || "—";
 };
 
+const formatCreatedAt = (value?: string) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+};
+
 const getDeveloperStatusLabel = (
   developer: AdminDeveloperListItem
 ): AgentStatusLabel => {
@@ -106,41 +119,41 @@ const getDeveloperStatusLabel = (
 function StatusBadge({ status }: { status: AgentStatusLabel }) {
   if (status === "Approval pending") {
     return (
-      <span className="rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center border border-[rgba(34,34,34,0.10)] bg-white p-[6px_10px] text-[12px] font-[SemiBold] text-[#222]">
+      <span className="rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center border border-[rgba(34,34,34,0.10)] bg-white p-[6px_10px] text-[12px] font-[SemiBold] text-[#222] whitespace-nowrap">
         Approval pending
       </span>
     );
   }
   if (status === "Active") {
     return (
-      <span className="bg-[#00A663] rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center p-[6px_10px] text-[12px] font-[SemiBold] text-[#FFF]">
+      <span className="bg-[#00A663] rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center p-[6px_10px] text-[12px] font-[SemiBold] text-[#FFF] whitespace-nowrap">
         Active
       </span>
     );
   }
   if (status === "Approval Declined") {
     return (
-      <span className="rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center border border-[#ea393459] p-[6px_10px] text-[12px] font-[SemiBold] text-[#ea3934] bg-[#ea393414]">
+      <span className="rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center border border-[#ea393459] p-[6px_10px] text-[12px] font-[SemiBold] text-[#ea3934] bg-[#ea393414] whitespace-nowrap">
         Approval Declined
       </span>
     );
   }
   if (status === "Invited") {
     return (
-      <span className="rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center p-[6px_10px] text-[12px] font-[SemiBold] text-[#FFF] bg-[#8ACBD0]">
+      <span className="rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center p-[6px_10px] text-[12px] font-[SemiBold] text-[#FFF] bg-[#8ACBD0] whitespace-nowrap">
         Invited
       </span>
     );
   }
   if (status === "Invitation Expired") {
     return (
-      <span className="rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center p-[6px_10px] text-[12px] font-[SemiBold] text-[#FFF] bg-[#FF6B35]">
+      <span className="rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center p-[6px_10px] text-[12px] font-[SemiBold] text-[#FFF] bg-[#FF6B35] whitespace-nowrap">
         Invitation Expired
       </span>
     );
   }
   return (
-    <span className="rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center p-[6px_10px] text-[12px] font-[SemiBold] text-[#FFF] bg-[#E80808]">
+    <span className="rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center p-[6px_10px] text-[12px] font-[SemiBold] text-[#FFF] bg-[#E80808] whitespace-nowrap">
       Inactive
     </span>
   );
@@ -148,6 +161,7 @@ function StatusBadge({ status }: { status: AgentStatusLabel }) {
 
 function DeveloperAccount() {
   const navigate = useNavigate();
+  const { push } = useToast();
   const sortDropdownRef = useRef<HTMLDivElement>(null);
 
   const [selectedSort, setSelectedSort] = useState<SortOption>("All");
@@ -252,6 +266,39 @@ function DeveloperAccount() {
     setIsSortDropdownOpen(false);
   };
 
+  const handleDeleteDeveloper = async (developer: AdminDeveloperListItem) => {
+    const developerLabel = (developer.name || developer.email || "this developer").trim();
+    const result = await Swal.fire({
+      title: "Delete developer account?",
+      text: `This will permanently delete ${developerLabel}.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#EA3934",
+      reverseButtons: true,
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+      await developersService.deleteDeveloperById(developer._id);
+      push({
+        type: "success",
+        title: "Developer deleted",
+        description: `${developerLabel} has been deleted successfully.`,
+      });
+      const controller = new AbortController();
+      await loadDevelopers(controller.signal);
+    } catch (err) {
+      push({
+        type: "error",
+        title: "Delete failed",
+        description: getApiErrorMessage(err, "Failed to delete developer"),
+      });
+    }
+  };
+
   return (
     <>
       <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
@@ -340,6 +387,7 @@ function DeveloperAccount() {
                   <p className="text-[14px] font-[SemiBold] text-[#222]">Email</p>
                   <p className="text-[14px] font-[SemiBold] text-[#222]">Country</p>
                   <p className="text-[14px] font-[SemiBold] text-[#222]">Status</p>
+                  <p className="text-[14px] font-[SemiBold] text-[#222]">Created At</p>
                   <p className="text-[14px] font-[SemiBold] text-[#222]">Actions</p>
                 </div>
 
@@ -361,6 +409,11 @@ function DeveloperAccount() {
                         developerImgBaseUrl
                       );
                       const statusLabel = getDeveloperStatusLabel(row);
+                      const shouldOpenViewPage =
+                        statusLabel === "Approval pending" ||
+                        statusLabel === "Approval Declined" ||
+                        statusLabel === "Invited" ||
+                        statusLabel === "Invitation Expired";
                       return (
                         <div
                           key={row._id}
@@ -389,37 +442,45 @@ function DeveloperAccount() {
                             {formatCountry(row)}
                           </p>
                           <StatusBadge status={statusLabel} />
+                          <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                            {formatCreatedAt(row.createdAt)}
+                          </p>
                           <div className="flex items-center justify-start gap-[10px]">
+                          
                             <button
                               onClick={() =>
                                 navigate(
-                                  `/developeraccountview?id=${encodeURIComponent(row._id)}`
-                                )
-                              }
-                              type="button"
-                              className="cursor-pointer p-[6px]"
-                              aria-label="View"
-                            >
-                              <EyeDarkIcon width={20} height={20} />
-                            </button>
-                            <button
-                              onClick={() =>
-                                navigate(
-                                  `/developeraccountdetail?id=${encodeURIComponent(row._id)}`
+                                  shouldOpenViewPage
+                                    ? `/developeraccountview?id=${encodeURIComponent(row._id)}`
+                                    : `/developeraccountdetail?id=${encodeURIComponent(row._id)}`
                                 )
                               }
                               type="button"
                               className="cursor-pointer p-[6px]"
                               aria-label="Edit"
                             >
-                              <EditIcon width={20} height={20} />
+                              <EyeDarkIcon width={20} height={20} />
                             </button>
+                            {statusLabel === "Approval pending" && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  navigate(
+                                    `/developeraccountdetail?id=${encodeURIComponent(row._id)}`
+                                  )
+                                }
+                                className="cursor-pointer p-[6px]"
+                                aria-label="Edit"
+                              >
+                                <EditIcon width={20} height={20} />
+                              </button>
+                            )}
+
                             <button
                               type="button"
-                              className="cursor-pointer p-[6px] opacity-50 cursor-not-allowed"
+                              onClick={() => void handleDeleteDeveloper(row)}
+                              className="cursor-pointer p-[6px]"
                               aria-label="Delete"
-                              disabled
-                              title="Delete will be wired in a later step"
                             >
                               <TrashIcon width={20} height={20} />
                             </button>
@@ -445,6 +506,11 @@ function DeveloperAccount() {
       <InviteDeveloperModal
         isOpen={isInviteDeveloperModalOpen}
         onClose={() => setIsInviteDeveloperModalOpen(false)}
+        onInviteSuccess={() => {
+          setCurrentPage(1);
+          const controller = new AbortController();
+          void loadDevelopers(controller.signal);
+        }}
       />
     </>
   );

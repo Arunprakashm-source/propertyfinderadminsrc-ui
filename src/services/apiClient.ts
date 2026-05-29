@@ -142,6 +142,18 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+export function isAbortError(error: unknown): boolean {
+  if (error instanceof DOMException && error.name === "AbortError") return true;
+  if (error instanceof Error) {
+    return (
+      error.name === "AbortError" ||
+      error.message === "The operation was aborted." ||
+      error.message === "signal is aborted without reason"
+    );
+  }
+  return false;
+}
+
 export const apiClient = {
   get<T>(path: string, options?: Omit<RequestOptions, "body">) {
     return request<T>("GET", path, options);

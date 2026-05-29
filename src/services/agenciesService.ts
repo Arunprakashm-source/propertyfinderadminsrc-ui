@@ -1,17 +1,16 @@
 import { apiClient } from "./apiClient";
 import type {
+  AgenciesListResponse,
+  AgencyDetailResponse,
   CountryOption,
-  DeveloperDetailResponse,
-  DevelopersListResponse,
-  InviteDeveloperPayload,
-  InviteDeveloperResponse,
-  ListDevelopersParams,
+  InviteAgencyPayload,
+  ListAgenciesParams,
   MasterDataCountriesResponse,
   SupportedUrlsResponse,
-  UpdateDeveloperPayload,
+  UpdateAgencyPayload,
 } from "../types/api";
 
-const buildQuery = (params: ListDevelopersParams) => {
+const buildQuery = (params: ListAgenciesParams) => {
   const search = new URLSearchParams();
   if (params.page != null) search.set("page", String(params.page));
   if (params.limit != null) search.set("limit", String(params.limit));
@@ -21,67 +20,61 @@ const buildQuery = (params: ListDevelopersParams) => {
   return qs ? `?${qs}` : "";
 };
 
-export const developersService = {
-  listDevelopers(params: ListDevelopersParams = {}) {
-    return apiClient.get<DevelopersListResponse>(
-      `/developers${buildQuery(params)}`,
-      { auth: true }
-    );
+export const agenciesService = {
+  inviteAgency(payload: InviteAgencyPayload, signal?: AbortSignal) {
+    return apiClient.post("/agency/invite-agency", payload, { auth: true, signal });
   },
-  inviteDeveloper(payload: InviteDeveloperPayload) {
-    return apiClient.post<InviteDeveloperResponse>(
-      "/developers/invite-developer",
-      payload,
-      { auth: true }
-    );
+  listAgencies(params: ListAgenciesParams = {}) {
+    return apiClient.get<AgenciesListResponse>(`/agency${buildQuery(params)}`, {
+      auth: true,
+    });
   },
-  getDeveloperById(id: string, signal?: AbortSignal) {
-    return apiClient.get<DeveloperDetailResponse>(`/developers/${encodeURIComponent(id)}`, {
+  getAgencyById(id: string, signal?: AbortSignal) {
+    return apiClient.get<AgencyDetailResponse>(`/agency/${encodeURIComponent(id)}`, {
       auth: true,
       signal,
     });
   },
-  updateDeveloperById(id: string, payload: UpdateDeveloperPayload, signal?: AbortSignal) {
-    return apiClient.put<DeveloperDetailResponse>(
-      `/developers/${encodeURIComponent(id)}`,
-      payload,
-      { auth: true, signal }
-    );
+  updateAgencyById(id: string, payload: UpdateAgencyPayload, signal?: AbortSignal) {
+    return apiClient.put<AgencyDetailResponse>(`/agency/${encodeURIComponent(id)}`, payload, {
+      auth: true,
+      signal,
+    });
   },
-  verifyDeveloper(id: string, action: "approve" | "reject", signal?: AbortSignal) {
-    return apiClient.post<{ developer?: DeveloperDetailResponse["developer"] }>(
-      `/developers/${encodeURIComponent(id)}/verify`,
+  verifyAgency(id: string, action: "approve" | "reject", signal?: AbortSignal) {
+    return apiClient.post<{ agency?: AgencyDetailResponse["agency"] }>(
+      `/agency/${encodeURIComponent(id)}/verify`,
       { action },
       { auth: true, signal }
     );
   },
-  async updateDeveloperProfilePicture(
+  async updateAgencyProfilePicture(
     id: string,
     file: File,
     signal?: AbortSignal
-  ): Promise<{ developer?: DeveloperDetailResponse["developer"] }> {
+  ): Promise<{ agency?: AgencyDetailResponse["agency"] }> {
     const body = new FormData();
     body.append("profilePicture", file);
-    return apiClient.put<{ developer?: DeveloperDetailResponse["developer"] }>(
-      `/developers/${encodeURIComponent(id)}/profile-picture`,
+    return apiClient.put<{ agency?: AgencyDetailResponse["agency"] }>(
+      `/agency/${encodeURIComponent(id)}/profile-picture`,
       body,
       { auth: true, signal }
     );
   },
-  async removeDeveloperProfilePicture(
+  async removeAgencyProfilePicture(
     id: string,
     signal?: AbortSignal
-  ): Promise<{ developer?: DeveloperDetailResponse["developer"] }> {
+  ): Promise<{ agency?: AgencyDetailResponse["agency"] }> {
     const body = new FormData();
     body.append("removeProfilePicture", "true");
-    return apiClient.put<{ developer?: DeveloperDetailResponse["developer"] }>(
-      `/developers/${encodeURIComponent(id)}/profile-picture`,
+    return apiClient.put<{ agency?: AgencyDetailResponse["agency"] }>(
+      `/agency/${encodeURIComponent(id)}/profile-picture`,
       body,
       { auth: true, signal }
     );
   },
-  async deleteDeveloperById(id: string, signal?: AbortSignal): Promise<void> {
-    await apiClient.delete<void>(`/developers/${encodeURIComponent(id)}`, {
+  async deleteAgencyById(id: string, signal?: AbortSignal): Promise<void> {
+    await apiClient.delete<void>(`/agency/${encodeURIComponent(id)}`, {
       auth: true,
       signal,
     });
@@ -97,7 +90,6 @@ export const developersService = {
       "/master-data?types=countries",
       { auth: true, signal }
     );
-
     return (data.countries ?? [])
       .filter((country) => country?.name && country?.code && country?.phoneCode)
       .sort(
