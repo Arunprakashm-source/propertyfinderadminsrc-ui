@@ -130,6 +130,180 @@ export type ListAgenciesParams = {
   sortBy?: string;
 };
 
+export type AgencyDropdownItem = {
+  _id: string;
+  agencyName?: string;
+  email?: string;
+  isVerified?: boolean;
+  isActive?: boolean;
+  invitationStatus?: string;
+};
+
+export type AgenciesDropdownResponse = {
+  agencies: AgencyDropdownItem[];
+};
+
+export type AgentTypeOption = {
+  name: string;
+  value: string;
+};
+
+export type MasterDataAgentTypesResponse = {
+  agentTypes?: AgentTypeOption[];
+};
+
+export type AdminAgentListItem = {
+  _id: string;
+  fullName?: string;
+  email?: string;
+  phoneNumber?: string;
+  agentType?: string;
+  profilePicture?: string | null;
+  profilePictureUrl?: string | null;
+  isActive?: boolean;
+  isVerified?: boolean;
+  invitationStatus?: string;
+  agency?: {
+    _id?: string;
+    agencyName?: string;
+    email?: string;
+  } | null;
+  createdAt?: string;
+  lastLogin?: string;
+};
+
+export type AgentsListPagination = {
+  currentPage: number;
+  totalPages: number;
+  totalAgents: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type AgentsListResponse = {
+  agents: AdminAgentListItem[];
+  pagination: AgentsListPagination;
+};
+
+export type ListAgentsParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  sortBy?: string;
+  agency?: string;
+};
+
+export type InviteAgentPayload = {
+  agencyId: string;
+  email: string;
+  fullName?: string;
+  agentType?: string;
+};
+
+export type InviteAgentResponse = {
+  email?: string;
+  invitationToken?: string;
+  expiresAt?: string;
+};
+
+export type JobTitleOption = {
+  _id: string;
+  title?: string;
+};
+
+export type MasterDataJobTitlesResponse = {
+  jobTitles?: JobTitleOption[];
+};
+
+export type AgentStatistics = {
+  totalRevenueSales?: number;
+  totalRevenueRent?: number;
+  activeListings?: number;
+  totalListings?: number;
+  totalRentProperties?: number;
+  totalSaleProperties?: number;
+  totalInquiries?: number;
+  newInquiries?: number;
+  dealsClosedSales?: number;
+  dealsClosedRent?: number;
+  totalDeals?: number;
+};
+
+export type AdminAgentDetail = {
+  _id: string;
+  fullName?: string;
+  email?: string;
+  phoneNumber?: string;
+  phoneNumberWithoutCode?: string;
+  phoneCode?: string;
+  whatsappNumber?: string;
+  agentType?: string;
+  profilePicture?: string | null;
+  profilePictureUrl?: string | null;
+  nationality?: UserCountryRef | null;
+  specialization?: { _id?: string; title?: string } | null;
+  agency?: {
+    _id?: string;
+    agencyName?: string;
+    email?: string;
+  } | null;
+  invitationStatus?: string;
+  isActive?: boolean;
+  isVerified?: boolean;
+  isEmailVerified?: boolean;
+  isPhoneVerified?: boolean;
+  brokerLicenseNumber?: string;
+  experience?: number;
+  description?: string;
+  aboutMe?: string;
+  preferences?: {
+    notificationSettings?: {
+      email?: boolean;
+      push?: boolean;
+    };
+  };
+  statistics?: AgentStatistics;
+  createdAt?: string;
+  lastLogin?: string;
+  lastActiveAt?: string;
+  loginAttempts?: number;
+};
+
+export type AgentDetailResponse = {
+  agent: AdminAgentDetail;
+};
+
+export type UpdateAgentPayload = {
+  fullName?: string;
+  email?: string;
+  phoneNumber?: string;
+  phoneCode?: string;
+  nationality?: string;
+  agentType?: string;
+  specialization?: string;
+  brokerLicenseNumber?: string;
+  experience?: number;
+  whatsappNumber?: string;
+  aboutMe?: string;
+  description?: string;
+  isActive?: boolean;
+  preferences?: {
+    notificationSettings?: {
+      email?: boolean;
+      push?: boolean;
+    };
+  };
+};
+
+export type VerifyAgentPayload = {
+  action: "approve" | "decline";
+  specializationId?: string;
+  agentType?: string;
+  isActive?: boolean;
+  reason?: string;
+};
+
 export type InviteAgencyPayload = {
   agencyName: string;
   email: string;
@@ -315,6 +489,7 @@ export type SupportedUrlsResponse = {
     userUrl?: { img?: string };
     agencyUrl?: { img?: string; doc?: string };
     developerUrl?: { img?: string; doc?: string };
+    agentUrl?: { img?: string; doc?: string };
   };
 };
 

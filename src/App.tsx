@@ -12,6 +12,7 @@ import DeveloperAccount from "./pages/UserManagement/Developer/DeveloperAccount"
 import DeveloperAccDetail from "./pages/UserManagement/Developer/DeveloperAccDetails";
 import AgentAccount from "./pages/UserManagement/Agent/AgentAccount";
 import AgentAccountDetail from "./pages/UserManagement/Agent/AgentAccountDetails";
+import AgentAccView from "./pages/UserManagement/Agent/AgentAccView";
 import ListingProperty from "./pages/ListingManagement/ListingProperty/ListingProperty";
 import ListingPropertyDetail from "./pages/ListingManagement/ListingProperty/ListingPropertyDetail";
 import ListingProject from "./pages/ListingManagement/ListingProject/ListingProject";
@@ -48,6 +49,7 @@ function App() {
               <Route path="/agencyaccountview" element={<AgencyAccView />} />
               <Route path="/agencyaccountdetail" element={<AgencyAccountDetail />} />
               <Route path="/agentaccount" element={<AgentAccount />} />
+              <Route path="/agentaccountview" element={<AgentAccView />} />
               <Route path="/agentaccountdetail" element={<AgentAccountDetail />} />
               <Route path="/listingproperty" element={<ListingProperty />} />
               <Route path="/listingpropertydetail" element={<ListingPropertyDetail />} />

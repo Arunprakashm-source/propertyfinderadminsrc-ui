@@ -1,5 +1,6 @@
 import { apiClient } from "./apiClient";
 import type {
+  AgenciesDropdownResponse,
   AgenciesListResponse,
   AgencyDetailResponse,
   CountryOption,
@@ -27,6 +28,16 @@ export const agenciesService = {
   listAgencies(params: ListAgenciesParams = {}) {
     return apiClient.get<AgenciesListResponse>(`/agency${buildQuery(params)}`, {
       auth: true,
+    });
+  },
+  listAgenciesForDropdown(search?: string, signal?: AbortSignal) {
+    const searchParams = new URLSearchParams();
+    searchParams.set("limit", "10");
+    if (search?.trim()) searchParams.set("search", search.trim());
+    const qs = searchParams.toString();
+    return apiClient.get<AgenciesDropdownResponse>(`/agency/agents?${qs}`, {
+      auth: true,
+      signal,
     });
   },
   getAgencyById(id: string, signal?: AbortSignal) {
