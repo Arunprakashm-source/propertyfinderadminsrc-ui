@@ -500,10 +500,130 @@ export type UpdateAgencyPayload = {
 export type SupportedUrlsResponse = {
   supportedUrls?: {
     userUrl?: { img?: string };
+    propertyUrl?: { img?: string; vid?: string };
     agencyUrl?: { img?: string; doc?: string };
     developerUrl?: { img?: string; doc?: string };
     agentUrl?: { img?: string; doc?: string };
   };
+};
+
+export type PropertyLocationOption = {
+  _id?: string;
+  cityKey?: string;
+  displayName?: string;
+  propertyCount?: number;
+};
+
+export type MasterDataPropertyLocationsResponse = {
+  propertyLocations?: PropertyLocationOption[];
+};
+
+export type AgentDropdownItem = {
+  _id: string;
+  fullName?: string;
+  email?: string;
+  agentType?: string;
+  profilePicture?: string | null;
+  agency?: {
+    _id?: string;
+    agencyName?: string;
+    profilePicture?: string | null;
+  } | null;
+};
+
+export type AgentsDropdownResponse = {
+  agents: AgentDropdownItem[];
+};
+
+export type AdminPropertyProfileRef = {
+  _id?: string;
+  fullName?: string;
+  agencyName?: string;
+  profilePicture?: string | null;
+  profilePictureUrl?: string | null;
+};
+
+export type AdminPropertyImage = {
+  url?: string;
+  isPrimary?: boolean;
+  order?: number;
+};
+
+export type AdminPropertyListItem = {
+  _id: string;
+  title?: string;
+  slug?: string;
+  status?: string;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  isVerified?: boolean;
+  price?: number;
+  currency?: string;
+  location?: {
+    city?: string;
+    zone?: string;
+    fullAddress?: string;
+  };
+  listingType?: {
+    _id?: string;
+    name?: string;
+    transaction?: string;
+    category?: string;
+  };
+  propertyType?: {
+    _id?: string;
+    name?: string;
+    slug?: string;
+    category?: string;
+  };
+  agent?: AdminPropertyProfileRef | null;
+  agency?: AdminPropertyProfileRef | null;
+  images?: AdminPropertyImage[];
+  rentPricing?: { yearly?: number; monthly?: number } | null;
+  createdAt?: string;
+  publishedAt?: string;
+};
+
+export type PropertiesListPagination = {
+  currentPage: number;
+  totalPages: number;
+  totalProperties: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type PropertiesListResponse = {
+  properties: AdminPropertyListItem[];
+  pagination: PropertiesListPagination;
+};
+
+export type ListingTypeMasterItem = {
+  _id: string;
+  name?: string;
+  slug?: string;
+  transaction?: "buy" | "rent" | string;
+  displayOrder?: number;
+  isActive?: boolean;
+};
+
+export type MasterDataListingTypesResponse = {
+  listingTypes?: ListingTypeMasterItem[];
+  listingtypes?: ListingTypeMasterItem[];
+};
+
+export type ListPropertiesParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  agent?: string;
+  agency?: string;
+  city?: string;
+  startDate?: string;
+  endDate?: string;
+  sortBy?: string;
+  listingType?: string;
+  transaction?: string;
 };
 
 export type CountryOption = {

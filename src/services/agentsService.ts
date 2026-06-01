@@ -1,6 +1,7 @@
 import { apiClient } from "./apiClient";
 import type {
   AgentDetailResponse,
+  AgentsDropdownResponse,
   AgentsListResponse,
   CountryOption,
   InviteAgentPayload,
@@ -28,6 +29,15 @@ const buildQuery = (params: ListAgentsParams) => {
 };
 
 export const agentsService = {
+  listAgentsForDropdown(search?: string, signal?: AbortSignal) {
+    const searchParams = new URLSearchParams();
+    if (search?.trim()) searchParams.set("search", search.trim());
+    const qs = searchParams.toString();
+    return apiClient.get<AgentsDropdownResponse>(`/agents/list${qs ? `?${qs}` : ""}`, {
+      auth: true,
+      signal,
+    });
+  },
   listAgents(params: ListAgentsParams = {}) {
     return apiClient.get<AgentsListResponse>(`/agents${buildQuery(params)}`, {
       auth: true,

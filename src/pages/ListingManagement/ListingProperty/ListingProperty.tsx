@@ -1,133 +1,44 @@
-import mainbg from "../../../assets/img/mainbg.png";
-import profileimg from "../../../assets/img/profileless.png";
-import React, { useRef, useState, useEffect, useMemo } from "react";
-import { DownArrowIcon, EditIcon, EyeDarkIcon, LeftArrowIcon, LocationIcon, RightArrowIcon, SearchIcon, TrashIcon, } from "../../../assets/icons";
+import profileless from "../../../assets/img/profileless.png";
+import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
+import {
+    CancelIcon,
+    DownArrowIcon,
+    EditIcon,
+    LeftArrowIcon,
+    LocationIcon,
+    RightArrowIcon,
+    SearchIcon,
+    TrashIcon,
+} from "../../../assets/icons";
 import Header from "../../../components/Header/Header";
-import { Button } from "../../../components/Ui/Button";
+import Loader from "../../../components/Loader/loader";
 import Pagenation from "../../../components/Pagenation/Pagenation";
 import { useNavigate } from "react-router-dom";
+import { agenciesService } from "../../../services/agenciesService";
+import { agentsService } from "../../../services/agentsService";
+import { getApiErrorMessage } from "../../../services/apiClient";
+import { propertiesService } from "../../../services/propertiesService";
+import type {
+    AdminPropertyListItem,
+    AgencyDropdownItem,
+    AgentDropdownItem,
+    ListingTypeMasterItem,
+} from "../../../types/api";
 
-type Row = {
-    id: number;
-    name: string;
-    location: string;
-    phone: string;
-    email: string;
-    listingtype: string;
-    image: string;
-    agentname: string;
-    agencyname: string;
-    agentImg: string;
-    agencyImg: string;
-};
-const rowData: Row[] = [
-    {
-        id: 1,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "1234567890",
-        email: "dubai@gmail.com",
-        listingtype: "UAE",
-        image: profileimg,
-        agentname: "John Doe",
-        agencyname: "Omniyat Bespoke",
-        agentImg: profileimg,
-        agencyImg: profileimg,
-    },
-    {
-        id: 2,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "9898980909",
-        email: "dubai@gmail.com",
-        listingtype: "Norway",
-        image: profileimg,
-        agentname: "John Doe",
-        agencyname: "Omniyat Bespoke",
-        agentImg: profileimg,
-        agencyImg: profileimg,
-    },
-    {
-        id: 3,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "9898980909",
-        email: "dubai@gmail.com",
-        listingtype: "SouthAfrica",
-        image: profileimg,
-        agentname: "John Doe",
-        agencyname: "Omniyat Bespoke",
-        agentImg: profileimg,
-        agencyImg: profileimg,
-    },
-    {
-        id: 4,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "9898980909",
-        email: "dubai@gmail.com",
-        listingtype: "For Sale",
-        image: profileimg,
-        agentname: "John Doe",
-        agencyname: "Omniyat Bespoke",
-        agentImg: profileimg,
-        agencyImg: profileimg,
-    },
-    {
-        id: 5,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "9898980909",
-        email: "dubai@gmail.com",
-        listingtype: "Denmark",
-        image: profileimg,
-        agentname: "John Doe",
-        agencyname: "Omniyat Bespoke",
-        agentImg: profileimg,
-        agencyImg: profileimg,
-    },
-    {
-        id: 6,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "9898980909",
-        email: "dubai@gmail.com",
-        listingtype: "switzerland",
-        image: profileimg,
-        agentname: "John Doe",
-        agencyname: "Omniyat Bespoke",
-        agentImg: profileimg,
-        agencyImg: profileimg,
-    },
-];
-// agency type
-type AvailableAgency = {
-    id: number;
-    agencyName: string;
-    agencyTitle: string;
-    agencyAvatar: string;
-};
-type AvailableAgent = {
-    id: number;
-    agentName: string;
-    agentTitle: string;
-    agentAvatar: string;
-};
+type ListingChip = { label: string; value: string };
 
-const availableAgentsSeed: AvailableAgent[] = [
-    { id: 1, agentName: "William turner", agentTitle: "Senior Property Consultant", agentAvatar: profileimg },
-    { id: 2, agentName: "Sarah Chen", agentTitle: "Property Consultant", agentAvatar: profileimg },
-    { id: 3, agentName: "James Miller", agentTitle: "Senior Property Consultant", agentAvatar: profileimg },
-    { id: 4, agentName: "Emma Wilson", agentTitle: "Associate Consultant", agentAvatar: profileimg },
-    { id: 5, agentName: "Michael Brown", agentTitle: "Property Consultant", agentAvatar: profileimg },
+const ITEMS_PER_PAGE = 10;
+const SORT_OPTIONS = [
+    { name: "Newest", value: "newest" },
+    { name: "Oldest", value: "oldest" },
+    { name: "Price: Low to High", value: "price-asc" },
+    { name: "Price: High to Low", value: "price-desc" },
 ];
-const availableAgencySeed: AvailableAgency[] = [
-    { id: 1, agencyName: "William turner", agencyTitle: "Senior Property Consultant", agencyAvatar: profileimg },
-    { id: 2, agencyName: "Sarah Chen", agencyTitle: "Property Consultant", agencyAvatar: profileimg },
-    { id: 3, agencyName: "James Miller", agencyTitle: "Senior Property Consultant", agencyAvatar: profileimg },
-    { id: 4, agencyName: "Emma Wilson", agencyTitle: "Associate Consultant", agencyAvatar: profileimg },
-    { id: 5, agencyName: "Michael Brown", agencyTitle: "Property Consultant", agencyAvatar: profileimg },
-];
+const SEARCH_DEBOUNCE_MS = 400;
+const ALL_LOCATIONS = "All locations";
+const tableGrid =
+    "grid-cols-[1.15fr_0.95fr_1.2fr_0.85fr_0.7fr_0.85fr_0.65fr]";
+
 const weekDays = ["S", "M", "T", "W", "T", "F", "S"];
 
 const formatDisplayDate = (date: Date) =>
@@ -152,73 +63,441 @@ const getCalendarCells = (date: Date) => {
     while (cells.length < 42) cells.push(null);
     return cells;
 };
+
+const toApiDateString = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+};
+
+const isPlaceholderProfilePicture = (filename: string | null | undefined): boolean => {
+    if (!filename || !String(filename).trim()) return true;
+    const lower = String(filename).trim().toLowerCase();
+    if (lower.includes("profileless.png")) return true;
+    const base = lower.split(/[/\\?#]/).pop() ?? "";
+    return base === "profileless.png";
+};
+
+const resolveProfileSrc = (
+    filename: string | null | undefined,
+    baseUrl: string,
+    fallbackUrl?: string | null
+): string => {
+    const raw = (filename || "").trim();
+    if (!raw || isPlaceholderProfilePicture(raw)) return profileless;
+    if (/^https?:\/\//i.test(raw)) return raw;
+    const base = (baseUrl || "").trim().replace(/\/+$/, "");
+    if (!base) return fallbackUrl?.trim() || profileless;
+    return `${base}/${encodeURIComponent(raw)}`;
+};
+
+const resolvePropertyImageSrc = (
+    images: AdminPropertyListItem["images"],
+    propertyImgBaseUrl: string
+): string => {
+    const primary = images?.find((img) => img.isPrimary) ?? images?.[0];
+    const raw = (primary?.url || "").trim();
+    if (!raw) return profileless;
+    if (/^https?:\/\//i.test(raw)) return raw;
+    const base = (propertyImgBaseUrl || "").trim().replace(/\/+$/, "");
+    if (!base) return profileless;
+    return `${base}/${encodeURIComponent(raw)}`;
+};
+
+const formatPropertyLocation = (property: AdminPropertyListItem) => {
+    const loc = property.location;
+    const parts = [loc?.city, loc?.zone].filter(Boolean);
+    if (parts.length) return parts.join(", ");
+    return loc?.fullAddress?.trim() || "—";
+};
+
+const formatListingType = (property: AdminPropertyListItem) => {
+    const parts = [
+        property.propertyType?.name?.trim(),
+        property.listingType?.name?.trim(),
+    ].filter(Boolean);
+    return parts.length ? parts.join(" | ") : "—";
+};
+
+const formatPropertyPrice = (property: AdminPropertyListItem) => {
+    if (typeof property.price !== "number" || Number.isNaN(property.price)) return "—";
+    const currency = (property.currency || "AED").trim();
+    const amount = property.price.toLocaleString("en-US");
+    if (property.listingType?.transaction === "rent") {
+        const monthly = property.rentPricing?.monthly;
+        if (typeof monthly === "number" && !Number.isNaN(monthly)) {
+            return `${currency} ${amount}/yr · ${monthly.toLocaleString("en-US")}/mo`;
+        }
+        return `${currency} ${amount}/yr`;
+    }
+    return `${currency} ${amount}`;
+};
+
+const propertyStatusBadgeClass =
+    "rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center p-[6px_10px] text-[12px] font-[SemiBold] whitespace-nowrap";
+
+const formatPropertyStatusLabel = (status?: string) => {
+    if (!status?.trim()) return "";
+    const normalized = status.trim().toLowerCase();
+    if (normalized === "active") return "Active";
+    if (normalized === "inactive") return "Inactive";
+    if (normalized === "sold") return "Sold";
+    if (normalized === "rented") return "Rented";
+    if (normalized === "pending") return "Pending";
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
+function PropertyStatusBadge({ status }: { status?: string }) {
+    const label = formatPropertyStatusLabel(status);
+    if (!label) return <span className="text-[12px] text-[#707070]">—</span>;
+
+    const normalized = status!.trim().toLowerCase();
+
+    if (normalized === "active") {
+        return (
+            <span
+                className={`${propertyStatusBadgeClass} bg-[#00A663] text-[#FFF]`}
+            >
+                {label}
+            </span>
+        );
+    }
+    if (normalized === "pending") {
+        return (
+            <span
+                className={`${propertyStatusBadgeClass} border border-[rgba(34,34,34,0.10)] bg-white text-[#222]`}
+            >
+                {label}
+            </span>
+        );
+    }
+    if (normalized === "sold") {
+        return (
+            <span
+                className={`${propertyStatusBadgeClass} border border-[#ea393459] bg-[#ea393414] text-[#ea3934]`}
+            >
+                {label}
+            </span>
+        );
+    }
+    if (normalized === "rented") {
+        return (
+            <span
+                className={`${propertyStatusBadgeClass} bg-[#8ACBD0] text-[#FFF]`}
+            >
+                {label}
+            </span>
+        );
+    }
+    if (normalized === "inactive") {
+        return (
+            <span
+                className={`${propertyStatusBadgeClass} bg-[#E80808] text-[#FFF]`}
+            >
+                {label}
+            </span>
+        );
+    }
+
+    return (
+        <span
+            className={`${propertyStatusBadgeClass} border border-[rgba(34,34,34,0.10)] bg-[#F5F5F5] text-[#222]`}
+        >
+            {label}
+        </span>
+    );
+}
+
+const formatPublishedAt = (value?: string) => {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    return date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+};
+
 function ListingProperty() {
-    const navigate = useNavigate()
-    const [fromDate, setFromDate] = useState(new Date(2025, 11, 1));
-    const [toDate, setToDate] = useState(new Date(2025, 11, 12));
+    const navigate = useNavigate();
+
+    const [fromDate, setFromDate] = useState<Date | null>(null);
+    const [toDate, setToDate] = useState<Date | null>(null);
     const [activeDatePicker, setActiveDatePicker] = useState<"from" | "to" | null>(null);
-    const [displayMonth, setDisplayMonth] = useState(new Date(2026, 11, 1));
+    const [displayMonth, setDisplayMonth] = useState(() => new Date());
     const fromDateRef = useRef<HTMLDivElement>(null);
     const toDateRef = useRef<HTMLDivElement>(null);
     const locationDropdownRef = useRef<HTMLDivElement>(null);
     const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
-    const [selectedLocation, setSelectedLocation] = useState("All locations");
-    const locationOptions = ["All locations", "Dubai", "Norway", "SouthAfrica", "For Sale", "Denmark", "switzerland"];
+    const [selectedLocation, setSelectedLocation] = useState(ALL_LOCATIONS);
+    const [locationOptions, setLocationOptions] = useState<string[]>([ALL_LOCATIONS]);
 
-    // agency dropdown
-    const [isAgentTypeDropdownOpen, setIsAgentTypeDropdownOpen] = useState(false);
     const [isAgentDropdownOpen, setIsAgentDropdownOpen] = useState(false);
-    const [selectedAgent, setSelectedAgent] = useState<AvailableAgent | null>(null);
+    const [selectedAgent, setSelectedAgent] = useState<AgentDropdownItem | null>(null);
     const [agentSearch, setAgentSearch] = useState("");
+    const [agentOptions, setAgentOptions] = useState<AgentDropdownItem[]>([]);
     const agentDropdownRef = useRef<HTMLDivElement>(null);
-    const agentTypeDropdownRef = useRef<HTMLDivElement>(null);
 
-    // agency dropdown
     const [isAgencyDropdownOpen, setIsAgencyDropdownOpen] = useState(false);
-    const [selectedAgency, setSelectedAgency] = useState<AvailableAgency | null>(null);
+    const [selectedAgency, setSelectedAgency] = useState<AgencyDropdownItem | null>(null);
     const [agencySearch, setAgencySearch] = useState("");
+    const [agencyOptions, setAgencyOptions] = useState<AgencyDropdownItem[]>([]);
     const agencyDropdownRef = useRef<HTMLDivElement>(null);
-    // filter agency
-    const filteredAgency = useMemo(() => {
-        const q = agencySearch.trim().toLowerCase();
+    const chipDropdownRef = useRef<HTMLDivElement>(null);
+    const sortRef = useRef<HTMLDivElement>(null);
 
-        if (!q) return availableAgencySeed;
+    const [selectedChip, setSelectedChip] = useState("all");
+    const [sortBy, setSortBy] = useState("newest");
+    const [isChipDropdownOpen, setIsChipDropdownOpen] = useState(false);
+    const [isSortOpen, setIsSortOpen] = useState(false);
+    const [listingTypes, setListingTypes] = useState<ListingTypeMasterItem[]>([]);
 
-        return availableAgencySeed.filter(
-            (a) =>
-                a.agencyName.toLowerCase().includes(q) ||
-                a.agencyTitle.toLowerCase().includes(q)
-        );
-    }, [agencySearch]);
-    // filter agent
+    const [searchInput, setSearchInput] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [properties, setProperties] = useState<AdminPropertyListItem[]>([]);
+    const [totalProperties, setTotalProperties] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [propertyImgBaseUrl, setPropertyImgBaseUrl] = useState("");
+    const [agentImgBaseUrl, setAgentImgBaseUrl] = useState("");
+    const [agencyImgBaseUrl, setAgencyImgBaseUrl] = useState("");
     const filteredAgents = useMemo(() => {
         const q = agentSearch.trim().toLowerCase();
-        if (!q) return availableAgentsSeed;
-        return availableAgentsSeed.filter(
+        if (!q) return agentOptions;
+        return agentOptions.filter(
             (a) =>
-                a.agentName.toLowerCase().includes(q) || a.agentTitle.toLowerCase().includes(q)
+                (a.fullName || "").toLowerCase().includes(q) ||
+                (a.email || "").toLowerCase().includes(q) ||
+                (a.agency?.agencyName || "").toLowerCase().includes(q)
         );
-    }, [agentSearch]);
+    }, [agentSearch, agentOptions]);
+
+    const filteredAgency = useMemo(() => {
+        const q = agencySearch.trim().toLowerCase();
+        if (!q) return agencyOptions;
+        return agencyOptions.filter((a) =>
+            (a.agencyName || "").toLowerCase().includes(q)
+        );
+    }, [agencySearch, agencyOptions]);
+
+    const listingTypeChips = useMemo<ListingChip[]>(() => {
+        const options = listingTypes
+            .filter((item) => item.slug !== "new-projects")
+            .sort(
+                (a, b) =>
+                    Number(a.displayOrder ?? 999) - Number(b.displayOrder ?? 999)
+            )
+            .map((item) => ({
+                label: item.name?.trim() || "—",
+                value: item._id,
+            }));
+        return [{ label: "All", value: "all" }, ...options];
+    }, [listingTypes]);
+
+    const selectedChipLabel =
+        listingTypeChips.find((item) => item.value === selectedChip)?.label ?? "All";
+
+    const selectedSortLabel =
+        SORT_OPTIONS.find((item) => item.value === sortBy)?.name ?? "Newest";
+
     useEffect(() => {
-        if (!isAgentDropdownOpen && !isAgentTypeDropdownOpen && !isAgencyDropdownOpen) return;
+        if (!isSortOpen) return;
+        const onDown = (e: MouseEvent) => {
+            if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+                setIsSortOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", onDown);
+        return () => document.removeEventListener("mousedown", onDown);
+    }, [isSortOpen]);
+
+    useEffect(() => {
+        if (!isChipDropdownOpen) return;
+        const onDown = (e: MouseEvent) => {
+            if (
+                chipDropdownRef.current &&
+                !chipDropdownRef.current.contains(e.target as Node)
+            ) {
+                setIsChipDropdownOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", onDown);
+        return () => document.removeEventListener("mousedown", onDown);
+    }, [isChipDropdownOpen]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedChip, sortBy]);
+
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setDebouncedSearch(searchInput.trim());
+            setCurrentPage(1);
+        }, SEARCH_DEBOUNCE_MS);
+        return () => window.clearTimeout(timer);
+    }, [searchInput]);
+
+    useEffect(() => {
+        let mounted = true;
+        const controller = new AbortController();
+        const loadMaster = async () => {
+            try {
+                const [urls, locations, types] = await Promise.all([
+                    propertiesService.getSupportedUrls(controller.signal),
+                    propertiesService.listPropertyLocations(controller.signal),
+                    propertiesService.listListingTypes(controller.signal),
+                ]);
+                if (!mounted) return;
+                setPropertyImgBaseUrl((urls.supportedUrls?.propertyUrl?.img || "").trim());
+                setAgentImgBaseUrl((urls.supportedUrls?.agentUrl?.img || "").trim());
+                setAgencyImgBaseUrl((urls.supportedUrls?.agencyUrl?.img || "").trim());
+                setListingTypes(types);
+                setLocationOptions([
+                    ALL_LOCATIONS,
+                    ...locations.map((loc) => loc.displayName?.trim() || "").filter(Boolean),
+                ]);
+            } catch {
+                if (mounted) {
+                    setPropertyImgBaseUrl("");
+                    setAgentImgBaseUrl("");
+                    setAgencyImgBaseUrl("");
+                    setListingTypes([]);
+                    setLocationOptions([ALL_LOCATIONS]);
+                }
+            }
+        };
+        void loadMaster();
+        return () => {
+            mounted = false;
+            controller.abort();
+        };
+    }, []);
+
+    useEffect(() => {
+        let mounted = true;
+        const controller = new AbortController();
+        const loadAgencies = async () => {
+            try {
+                const data = await agenciesService.listAgenciesForDropdown(
+                    undefined,
+                    controller.signal
+                );
+                if (!mounted) return;
+                setAgencyOptions(data.agencies || []);
+            } catch {
+                if (mounted) setAgencyOptions([]);
+            }
+        };
+        void loadAgencies();
+        return () => {
+            mounted = false;
+            controller.abort();
+        };
+    }, []);
+
+    useEffect(() => {
+        let mounted = true;
+        const controller = new AbortController();
+        const loadAgents = async () => {
+            try {
+                const data = await agentsService.listAgentsForDropdown(
+                    undefined,
+                    controller.signal
+                );
+                if (!mounted) return;
+                setAgentOptions(data.agents ?? []);
+            } catch {
+                if (mounted) setAgentOptions([]);
+            }
+        };
+        void loadAgents();
+        return () => {
+            mounted = false;
+            controller.abort();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (
+            !isAgentDropdownOpen &&
+            !isAgencyDropdownOpen &&
+            !isLocationDropdownOpen
+        )
+            return;
         const onDocMouseDown = (e: MouseEvent) => {
             const t = e.target as Node;
             if (agentDropdownRef.current?.contains(t)) return;
-            if (agentTypeDropdownRef.current?.contains(t)) return;
             if (agencyDropdownRef.current?.contains(t)) return;
+            if (locationDropdownRef.current?.contains(t)) return;
             setIsAgentDropdownOpen(false);
-            setIsAgentTypeDropdownOpen(false);
             setIsAgencyDropdownOpen(false);
+            setIsLocationDropdownOpen(false);
         };
         document.addEventListener("mousedown", onDocMouseDown);
         return () => document.removeEventListener("mousedown", onDocMouseDown);
-    }, [isAgentDropdownOpen, isAgentTypeDropdownOpen, isAgencyDropdownOpen]);
+    }, [isAgentDropdownOpen, isAgencyDropdownOpen, isLocationDropdownOpen]);
 
+    const loadProperties = useCallback(
+        async (signal: AbortSignal) => {
+            setLoading(true);
+            setError(null);
+            try {
+                const data = await propertiesService.listProperties(
+                    {
+                        page: currentPage,
+                        limit: ITEMS_PER_PAGE,
+                        search: debouncedSearch || undefined,
+                        agent: selectedAgent?._id,
+                        agency: selectedAgency?._id,
+                        city:
+                            selectedLocation !== ALL_LOCATIONS
+                                ? selectedLocation
+                                : undefined,
+                        startDate: fromDate ? toApiDateString(fromDate) : undefined,
+                        endDate: toDate ? toApiDateString(toDate) : undefined,
+                        sortBy,
+                        listingType: selectedChip === "all" ? undefined : selectedChip,
+                    },
+                    signal
+                );
+                if (signal.aborted) return;
+                setProperties(data.properties ?? []);
+                setTotalProperties(data.pagination?.totalProperties ?? 0);
+            } catch (err) {
+                if (signal.aborted) return;
+                setProperties([]);
+                setTotalProperties(0);
+                setError(getApiErrorMessage(err, "Failed to load properties"));
+            } finally {
+                if (!signal.aborted) setLoading(false);
+            }
+        },
+        [
+            currentPage,
+            debouncedSearch,
+            selectedAgent?._id,
+            selectedAgency?._id,
+            selectedLocation,
+            fromDate,
+            toDate,
+            sortBy,
+            selectedChip,
+        ]
+    );
 
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
+    useEffect(() => {
+        const controller = new AbortController();
+        void loadProperties(controller.signal);
+        return () => controller.abort();
+    }, [loadProperties]);
 
-    const paginatedRows = rowData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedAgent?._id, selectedAgency?._id, selectedLocation, fromDate, toDate]);
+
     const calendarCells = getCalendarCells(displayMonth);
 
     const shiftMonth = (direction: -1 | 1) => {
@@ -228,7 +507,8 @@ function ListingProperty() {
     const openDatePicker = (type: "from" | "to") => {
         setActiveDatePicker((prev) => (prev === type ? null : type));
         const sourceDate = type === "from" ? fromDate : toDate;
-        setDisplayMonth(new Date(sourceDate.getFullYear(), sourceDate.getMonth(), 1));
+        const monthSource = sourceDate ?? new Date();
+        setDisplayMonth(new Date(monthSource.getFullYear(), monthSource.getMonth(), 1));
     };
 
     const selectDate = (day: number) => {
@@ -238,15 +518,48 @@ function ListingProperty() {
         setActiveDatePicker(null);
     };
 
-    const renderDatePicker = (type: "from" | "to", selectedDate: Date, side: "left" | "right") => (
+    const clearDate = (type: "from" | "to", event: React.MouseEvent) => {
+        event.stopPropagation();
+        if (type === "from") setFromDate(null);
+        else setToDate(null);
+        setActiveDatePicker(null);
+    };
+
+    const renderDatePicker = (
+        type: "from" | "to",
+        selectedDate: Date | null,
+        side: "left" | "right"
+    ) => (
         <div className="relative" ref={type === "from" ? fromDateRef : toDateRef}>
-            <button
-                type="button"
-                onClick={() => openDatePicker(type)}
-                className="cursor-pointer h-[33px] rounded-full bg-white px-[12px] text-[12px] font-[SemiBold] text-[#222] inline-flex items-center"
-            >
-                {formatDisplayDate(selectedDate)}
-            </button>
+            <div className="inline-flex items-center h-[33px] rounded-full bg-white">
+                <button
+                    type="button"
+                    onClick={() => openDatePicker(type)}
+                    className={`cursor-pointer h-full rounded-full text-[12px] inline-flex items-center ${
+                        selectedDate ? "pl-[12px] pr-[4px]" : "px-[12px]"
+                    } ${
+                        selectedDate
+                            ? "font-[SemiBold] text-[#222]"
+                            : "font-[Regular] text-[#707070]"
+                    }`}
+                >
+                    {selectedDate
+                        ? formatDisplayDate(selectedDate)
+                        : type === "from"
+                          ? "From date"
+                          : "To date"}
+                </button>
+                {selectedDate && (
+                    <button
+                        type="button"
+                        onClick={(e) => clearDate(type, e)}
+                        className="cursor-pointer h-full pr-[10px] pl-[2px] inline-flex items-center justify-center shrink-0"
+                        aria-label={type === "from" ? "Clear from date" : "Clear to date"}
+                    >
+                        <CancelIcon width={10} height={10} stroke="#707070" />
+                    </button>
+                )}
+            </div>
             {activeDatePicker === type && (
                 <div
                     className={`absolute ${side === "left" ? "md:right-0 " : "md:right-0 right-[-80px] "} top-[40px] z-20 h-[320px] w-[280px] rounded-[12px] bg-white p-[20px] shadow-[0_8px_20px_rgba(0,0,0,0.12)]`}
@@ -260,13 +573,20 @@ function ListingProperty() {
                             <LeftArrowIcon width={14} height={14} />
                         </button>
                         <p className="text-[16px] font-[Bold] text-[#222]">{monthTitle(displayMonth)}</p>
-                        <button type="button" onClick={() => shiftMonth(1)} className="text-[16px] font-[SemiBold] text-[#222] px-[6px]">
+                        <button
+                            type="button"
+                            onClick={() => shiftMonth(1)}
+                            className="text-[16px] font-[SemiBold] text-[#222] px-[6px]"
+                        >
                             <RightArrowIcon width={14} height={14} />
                         </button>
                     </div>
                     <div className="grid grid-cols-7 gap-y-[6px] text-center">
                         {weekDays.map((d, index) => (
-                            <span key={`${type}-day-${d}-${index}`} className="text-[13px] font-[SemiBold] text-[#222]">
+                            <span
+                                key={`${type}-day-${d}-${index}`}
+                                className="text-[13px] font-[SemiBold] text-[#222]"
+                            >
                                 {d}
                             </span>
                         ))}
@@ -280,6 +600,7 @@ function ListingProperty() {
                                 );
                             }
                             const isSelected =
+                                selectedDate != null &&
                                 selectedDate.getDate() === day &&
                                 selectedDate.getMonth() === displayMonth.getMonth() &&
                                 selectedDate.getFullYear() === displayMonth.getFullYear();
@@ -288,10 +609,11 @@ function ListingProperty() {
                                     key={`${type}-${day}-${idx}`}
                                     type="button"
                                     onClick={() => selectDate(day)}
-                                    className={`h-[30px] w-[30px] mx-auto rounded-full text-[12px] font-[SemiBold] border transition-colors ${isSelected
-                                        ? "bg-[#EA3934] text-white border-[#EA3934]"
-                                        : "text-[#707070] border-[rgba(34,34,34,0.10)] hover:bg-[#F2F2F2]"
-                                        }`}
+                                    className={`h-[30px] w-[30px] mx-auto rounded-full text-[12px] font-[SemiBold] border transition-colors ${
+                                        isSelected
+                                            ? "bg-[#EA3934] text-white border-[#EA3934]"
+                                            : "text-[#707070] border-[rgba(34,34,34,0.10)] hover:bg-[#F2F2F2]"
+                                    }`}
                                 >
                                     {day}
                                 </button>
@@ -302,43 +624,39 @@ function ListingProperty() {
             )}
         </div>
     );
+
     return (
         <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
-            {/* Header */}
-            <Header
-                title="Listing Property"
-                showBack={false}
-                onBackClick={() => { }}
-            />
+            <Header title="Listing Property" showBack={false} onBackClick={() => {}} />
 
-            {/* Content */}
             <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
-                {/* Search and Add New Button */}
                 <div className="flex flex-wrap items-center mb-[30px] gap-[10px]">
                     <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[40px] w-full md:w-[280px]">
                         <SearchIcon className="text-[#707070] shrink-0" />
                         <input
                             type="search"
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
                             placeholder="Search here"
                             className="w-full bg-transparent text-[12px] font-[Regular] text-[#222] placeholder:text-[#707070] focus:outline-none"
                         />
                     </div>
-                    {/*agent dropdown*/}
+
                     <div className="relative" ref={agentDropdownRef}>
                         <button
                             type="button"
                             onClick={() => {
                                 setIsAgentDropdownOpen((prev) => !prev);
-
-                                // optional
-                                if (!isAgentDropdownOpen) {
-                                    setIsAgentTypeDropdownOpen(false);
-                                }
+                                setIsAgencyDropdownOpen(false);
                             }}
-                            className="cursor-pointer md:w-[250px] w-full  h-[40px] rounded-[15px] border border-[rgba(34,34,34,0.12)] px-[14px] text-left text-[14px] font-[Regular] flex items-center justify-between gap-[30px] bg-white"
+                            className="cursor-pointer md:w-[250px] w-full h-[40px] rounded-[15px] border border-[rgba(34,34,34,0.12)] px-[14px] text-left text-[14px] font-[Regular] flex items-center justify-between gap-[30px] bg-white"
                         >
-                            <span className={selectedAgent ? "text-[#222] font-[Medium]" : "text-[#707070]"}>
-                                {selectedAgent ? selectedAgent.agentName : "Select agent"}
+                            <span
+                                className={
+                                    selectedAgent ? "text-[#222] font-[Medium]" : "text-[#707070]"
+                                }
+                            >
+                                {selectedAgent?.fullName || "Select agent"}
                             </span>
                             <DownArrowIcon
                                 width={11}
@@ -362,12 +680,25 @@ function ListingProperty() {
                                     </div>
                                 </div>
                                 <div className="max-h-[200px] overflow-y-auto px-[12px] scrollbar-hide">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedAgent(null);
+                                            setIsAgentDropdownOpen(false);
+                                            setAgentSearch("");
+                                        }}
+                                        className="w-full text-left py-[10px] text-[12px] font-[Medium] text-[#707070] border-b border-[rgba(34,34,34,0.08)]"
+                                    >
+                                        All agents
+                                    </button>
                                     {filteredAgents.length === 0 ? (
-                                        <p className="text-[12px] text-[#707070] py-[12px] text-center">No agents found</p>
+                                        <p className="text-[12px] text-[#707070] py-[12px] text-center">
+                                            No agents found
+                                        </p>
                                     ) : (
-                                        filteredAgents.map((agent, idx) => (
+                                        filteredAgents.map((agent) => (
                                             <button
-                                                key={agent.id}
+                                                key={agent._id}
                                                 type="button"
                                                 onClick={() => {
                                                     setSelectedAgent(agent);
@@ -377,18 +708,21 @@ function ListingProperty() {
                                                 className="w-full text-left flex gap-[12px] items-start py-[12px] border-b border-[rgba(34,34,34,0.08)] rounded-[6px] px-[4px] -mx-[4px] transition-colors"
                                             >
                                                 <img
-                                                    src={agent.agentAvatar}
+                                                    src={resolveProfileSrc(
+                                                        agent.profilePicture,
+                                                        agentImgBaseUrl
+                                                    )}
                                                     alt=""
                                                     className="h-[40px] w-[40px] rounded-full object-cover shrink-0"
                                                 />
-                                                <div
-                                                    className={`flex-1 min-w-0 pt-[2px] ${idx < filteredAgents.length - 1 ? "" : ""}`}
-                                                >
+                                                <div className="flex-1 min-w-0 pt-[2px]">
                                                     <p className="text-[12px] font-[Bold] text-[#222] leading-tight">
-                                                        {agent.agentName}
+                                                        {agent.fullName || "—"}
                                                     </p>
-                                                    <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px] leading-tight">
-                                                        {agent.agentTitle}
+                                                    <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px] leading-tight truncate">
+                                                        {agent.agency?.agencyName ||
+                                                            agent.email ||
+                                                            "—"}
                                                     </p>
                                                 </div>
                                             </button>
@@ -398,7 +732,7 @@ function ListingProperty() {
                             </div>
                         )}
                     </div>
-                    {/*agency dropdown*/}
+
                     <div className="relative" ref={agencyDropdownRef}>
                         <button
                             type="button"
@@ -415,40 +749,40 @@ function ListingProperty() {
                                         : "text-[#707070]"
                                 }
                             >
-                                {selectedAgency
-                                    ? selectedAgency.agencyName
-                                    : "Select agency"}
+                                {selectedAgency?.agencyName || "Select agency"}
                             </span>
-
                             <DownArrowIcon
                                 width={11}
                                 height={7}
-                                className={`shrink-0 transition-transform duration-200 ${isAgencyDropdownOpen ? "rotate-180" : ""
-                                    }`}
+                                className={`shrink-0 transition-transform duration-200 ${isAgencyDropdownOpen ? "rotate-180" : ""}`}
                             />
                         </button>
-
                         {isAgencyDropdownOpen && (
                             <div className="absolute left-0 right-0 top-full z-40 w-[250px] mt-[8px] rounded-[10px] bg-white py-[12px] shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
-                                {/* search */}
                                 <div className="px-[12px] mb-[10px]">
                                     <div className="flex items-center gap-[10px] h-[40px] rounded-[10px] px-[12px] bg-white shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
                                         <SearchIcon className="text-[#707070] shrink-0" />
-
                                         <input
                                             type="search"
                                             value={agencySearch}
-                                            onChange={(e) =>
-                                                setAgencySearch(e.target.value)
-                                            }
+                                            onChange={(e) => setAgencySearch(e.target.value)}
                                             placeholder="Search agency"
                                             className="w-full bg-transparent text-[13px] font-[Regular] text-[#222] placeholder:text-[#94A3B8] focus:outline-none"
                                         />
                                     </div>
                                 </div>
-
-                                {/* list */}
                                 <div className="max-h-[200px] overflow-y-auto px-[12px] scrollbar-hide">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedAgency(null);
+                                            setIsAgencyDropdownOpen(false);
+                                            setAgencySearch("");
+                                        }}
+                                        className="w-full text-left py-[10px] text-[12px] font-[Medium] text-[#707070] border-b border-[rgba(34,34,34,0.08)]"
+                                    >
+                                        All agencies
+                                    </button>
                                     {filteredAgency.length === 0 ? (
                                         <p className="text-[12px] text-[#707070] py-[12px] text-center">
                                             No agency found
@@ -456,7 +790,7 @@ function ListingProperty() {
                                     ) : (
                                         filteredAgency.map((agency) => (
                                             <button
-                                                key={agency.id}
+                                                key={agency._id}
                                                 type="button"
                                                 onClick={() => {
                                                     setSelectedAgency(agency);
@@ -466,18 +800,20 @@ function ListingProperty() {
                                                 className="w-full text-left flex gap-[12px] items-start py-[12px] border-b border-[rgba(34,34,34,0.08)] rounded-[6px] px-[4px] -mx-[4px]"
                                             >
                                                 <img
-                                                    src={agency.agencyAvatar}
+                                                    src={resolveProfileSrc(
+                                                        agency.profilePicture,
+                                                        agencyImgBaseUrl,
+                                                        agency.profilePictureUrl
+                                                    )}
                                                     alt=""
                                                     className="h-[40px] w-[40px] rounded-full object-cover shrink-0"
                                                 />
-
                                                 <div className="flex-1 min-w-0 pt-[2px]">
                                                     <p className="text-[12px] font-[Bold] text-[#222] leading-tight">
-                                                        {agency.agencyName}
+                                                        {agency.agencyName || "—"}
                                                     </p>
-
-                                                    <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px] leading-tight">
-                                                        {agency.agencyTitle}
+                                                    <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px] leading-tight truncate">
+                                                        {agency?.email ||"—"}
                                                     </p>
                                                 </div>
                                             </button>
@@ -488,7 +824,105 @@ function ListingProperty() {
                         )}
                     </div>
                 </div>
-                {/* Date filter section */}
+
+                <div className="flex flex-col gap-[14px] mb-[20px] xl:flex-row xl:flex-wrap xl:items-center xl:justify-between">
+                    <div className="flex flex-wrap items-center gap-[12px]">
+                        <div className="flex items-center gap-[8px] relative">
+                            <div className="hidden 2xl:flex flex-wrap items-center gap-[8px]">
+                                {listingTypeChips.map((chip) => (
+                                    <button
+                                        key={chip.value}
+                                        type="button"
+                                        onClick={() => setSelectedChip(chip.value)}
+                                        className={`rounded-full px-[16px] h-[33px] text-[12px] font-[SemiBold] ${
+                                            selectedChip === chip.value
+                                                ? "bg-[#222] text-white"
+                                                : "bg-white border border-[rgba(34,34,34,0.10)] text-[#222]"
+                                        }`}
+                                    >
+                                        {chip.label}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="block 2xl:hidden relative" ref={chipDropdownRef}>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsChipDropdownOpen((prev) => !prev)}
+                                    className="h-[33px] w-[100px] rounded-full border border-[rgba(34,34,34,0.10)] bg-white px-[14px] text-[12px] font-[SemiBold] flex items-center justify-between gap-[6px] cursor-pointer"
+                                >
+                                    <span className="text-left truncate w-[50px]">
+                                        {selectedChipLabel}
+                                    </span>
+                                    <DownArrowIcon
+                                        width={10}
+                                        height={6}
+                                        className={`transition-transform ${isChipDropdownOpen ? "rotate-180" : ""}`}
+                                    />
+                                </button>
+                                {isChipDropdownOpen && (
+                                    <div className="absolute top-[40px] left-0 z-30 min-w-[160px] rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white shadow-md">
+                                        {listingTypeChips.map((chip) => (
+                                            <button
+                                                key={chip.value}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedChip(chip.value);
+                                                    setIsChipDropdownOpen(false);
+                                                }}
+                                                className="w-full text-left px-[14px] py-[8px] text-[12px] font-[SemiBold] text-[#222] hover:bg-[#F5F5F5]"
+                                            >
+                                                {chip.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-[10px] shrink-0">
+                        <div className="relative flex items-center gap-[8px]" ref={sortRef}>
+                            <span className="text-[12px] font-[SemiBold] text-[#222] whitespace-nowrap">
+                                Sort by:
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setIsSortOpen((o) => !o)}
+                                className="h-[33px] w-[108px] rounded-full border border-[rgba(34,34,34,0.10)] bg-white px-[14px] text-[12px] font-[SemiBold] text-[#222] inline-flex items-center justify-between gap-[8px] cursor-pointer"
+                            >
+                                <span className="truncate">{selectedSortLabel}</span>
+                                <DownArrowIcon
+                                    width={10}
+                                    height={6}
+                                    className={`shrink-0 transition-transform ${isSortOpen ? "rotate-180" : ""}`}
+                                />
+                            </button>
+                            {isSortOpen && (
+                                <div className="absolute right-0 top-[40px] z-30 min-w-[200px] rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white py-[6px] shadow-[0_8px_20px_rgba(0,0,0,0.10)] max-h-[200px] overflow-y-auto">
+                                    {SORT_OPTIONS.map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            type="button"
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                setSortBy(opt.value);
+                                                setIsSortOpen(false);
+                                            }}
+                                            className={`w-full px-[14px] py-[9px] text-left text-[12px] font-[Medium] hover:bg-[#F5F5F5] ${
+                                                sortBy === opt.value
+                                                    ? "text-[#0832AE]"
+                                                    : "text-[#222]"
+                                            }`}
+                                        >
+                                            {opt.name}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
                 <div className="p-[5px] mb-[10px] bg-[#F5F5F5] lg:rounded-full rounded-[10px] flex flex-col gap-[12px] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                     <div className="relative w-full sm:max-w-[280px]" ref={locationDropdownRef}>
                         <button
@@ -496,8 +930,20 @@ function ListingProperty() {
                             onClick={() => setIsLocationDropdownOpen((o) => !o)}
                             className="cursor-pointer h-[33px] w-full rounded-full bg-white px-[14px] flex items-center justify-between text-left text-[13px] font-[Regular] text-[#222]"
                         >
-                            <span className={selectedLocation === "All locations" ? "text-[#707070]" : "text-[#222]"}>{selectedLocation}</span>
-                            <DownArrowIcon className={`shrink-0 transition-transform ${isLocationDropdownOpen ? "rotate-180" : ""}`} width={11} height={7} />
+                            <span
+                                className={
+                                    selectedLocation === ALL_LOCATIONS
+                                        ? "text-[#707070]"
+                                        : "text-[#222]"
+                                }
+                            >
+                                {selectedLocation}
+                            </span>
+                            <DownArrowIcon
+                                className={`shrink-0 transition-transform ${isLocationDropdownOpen ? "rotate-180" : ""}`}
+                                width={11}
+                                height={7}
+                            />
                         </button>
                         {isLocationDropdownOpen && (
                             <div className="absolute left-0 right-0 top-[44px] z-20 max-h-[200px] overflow-y-auto bg-white border border-[rgba(34,34,34,0.10)] rounded-[10px] shadow-[0_6px_16px_rgba(0,0,0,0.12)] py-[6px]">
@@ -518,79 +964,160 @@ function ListingProperty() {
                             </div>
                         )}
                     </div>
-                    {/*Created date filter section*/}
                     <div className="flex flex-wrap items-center gap-[8px] text-[12px]">
-                        <span className="text-[#222] font-[Regular] whitespace-nowrap md:block hidden">Created date:</span>
-                        {/*From date */}
+                        <span className="text-[#222] font-[Regular] whitespace-nowrap md:block hidden">
+                            Created date:
+                        </span>
                         {renderDatePicker("from", fromDate, "left")}
                         <span className="text-[#707070]">to</span>
-                        {/*To date */}
                         {renderDatePicker("to", toDate, "right")}
                     </div>
                 </div>
-                {/* Table */}
+
+                {error && (
+                    <p className="text-[13px] text-[#EA3934] mb-[12px] font-[Medium]">{error}</p>
+                )}
+
                 <div className="overflow-x-auto w-full scrollbar-hide mb-[30px]">
-                    <div className="min-w-[1150px]">
+                    <div className="min-w-[1350px]">
                         <div className="rounded-[10px] border border-[rgba(34,34,34,0.08)] overflow-hidden bg-white">
-                            <div className="grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr] gap-[30px] items-center px-[14px] py-[12px] bg-[#F5F5F5] border-b border-[rgba(34,34,34,0.08)]">
+                            <div
+                                className={`grid ${tableGrid} gap-[20px] items-center px-[14px] py-[12px] bg-[#F5F5F5] border-b border-[rgba(34,34,34,0.08)]`}
+                            >
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Name</p>
+                                <p className="text-[14px] font-[SemiBold] text-[#222]">
+                                    Property For
+                                </p>
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Agent</p>
-                                <p className="text-[14px] font-[SemiBold] text-[#222]">Agency</p>
-                                <p className="text-[14px] font-[SemiBold] text-[#222]">Listing Type</p>
+                                <p className="text-[14px] font-[SemiBold] text-[#222]">Price</p>
+                                <p className="text-[14px] font-[SemiBold] text-[#222]">Status</p>
+                                <p className="text-[14px] font-[SemiBold] text-[#222]">Published</p>
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Actions</p>
                             </div>
 
-                            <div>
-                                {paginatedRows.map((row, idx) => (
-                                    <div
-                                        key={row.id}
-                                        className={`grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr] gap-[30px] items-center px-[14px] py-[12px] ${idx !== paginatedRows.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
-                                    >
-                                        <div className="flex items-center gap-[10px] min-w-0">
-                                            <div className="h-[40px] w-[40px] shrink-0 overflow-hidden rounded-[12px] bg-[#F5F5F5]">
-                                                <img src={row.image} alt="" className="h-full w-full object-cover rounded-[8px]" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-[12px] font-[SemiBold] text-[#222] leading-[1.2] mb-[4px] truncate">{row.name}</p>
-                                                <p className="text-[12px] text-[#707070] leading-[1.2] flex items-center gap-[5px] min-w-0">
-                                                    <span className="inline-flex shrink-0">
-                                                        <LocationIcon width={11} height={15} />
-                                                    </span>
-                                                    <span className="truncate">{row.location}</span>
+                            {loading ? (
+                                <div className="py-[40px] flex justify-center">
+                                    <Loader />
+                                </div>
+                            ) : properties.length === 0 ? (
+                                <p className="text-[13px] text-[#707070] py-[24px] text-center">
+                                    No properties found
+                                </p>
+                            ) : (
+                                <div>
+                                    {properties.map((row, idx) => {
+                                        const imageSrc = resolvePropertyImageSrc(
+                                            row.images,
+                                            propertyImgBaseUrl
+                                        );
+                                        const agentImg = resolveProfileSrc(
+                                            row.agent?.profilePicture,
+                                            agentImgBaseUrl,
+                                            row.agent?.profilePictureUrl
+                                        );
+                                        const agencyImg = resolveProfileSrc(
+                                            row.agency?.profilePicture,
+                                            agencyImgBaseUrl,
+                                            row.agency?.profilePictureUrl
+                                        );
+                                        return (
+                                            <div
+                                                key={row._id}
+                                                className={`grid ${tableGrid} gap-[20px] items-center px-[14px] py-[12px] ${idx !== properties.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
+                                            >
+                                                <div className="flex items-center gap-[10px] min-w-0">
+                                                    <div className="h-[40px] w-[40px] shrink-0 overflow-hidden rounded-[12px] bg-[#F5F5F5]">
+                                                        <img
+                                                            src={imageSrc}
+                                                            alt=""
+                                                            className="h-full w-full object-cover rounded-[8px]"
+                                                        />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[12px] font-[SemiBold] text-[#222] leading-[1.2] mb-[4px] truncate">
+                                                            {row.title || "—"}
+                                                        </p>
+                                                        <p className="text-[12px] text-[#707070] leading-[1.2] flex items-center gap-[5px] min-w-0">
+                                                            <span className="inline-flex shrink-0">
+                                                                <LocationIcon
+                                                                    width={11}
+                                                                    height={15}
+                                                                />
+                                                            </span>
+                                                            <span className="truncate">
+                                                                {formatPropertyLocation(row)}
+                                                            </span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                                                    {formatListingType(row)}
                                                 </p>
+                                                <div className="flex items-start gap-[10px] min-w-0">
+                                                    <img
+                                                        src={agentImg}
+                                                        alt=""
+                                                        className="w-[40px] h-[40px] rounded-[12px] object-cover border border-[rgba(34,34,34,0.08)] shrink-0"
+                                                    />
+                                                    <div className="min-w-0 pt-[2px]">
+                                                        <p className="text-[12px] font-[SemiBold] text-[#222] truncate leading-tight">
+                                                            {row.agent?.fullName || "—"}
+                                                        </p>
+                                                        {row.agency?.agencyName ? (
+                                                            <div className="flex items-center gap-[6px] mt-[6px] min-w-0">
+                                                                <img
+                                                                    src={agencyImg}
+                                                                    alt=""
+                                                                    className="w-[18px] h-[18px] rounded-full object-cover border border-[rgba(34,34,34,0.08)] shrink-0"
+                                                                />
+                                                                <p className="text-[11px] font-[Regular] text-[#707070] truncate leading-tight">
+                                                                    {row.agency.agencyName}
+                                                                </p>
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                                <p className="text-[12px] font-[Regular] text-[#222] truncate min-w-0">
+                                                    {formatPropertyPrice(row)}
+                                                </p>
+                                                <PropertyStatusBadge status={row.status} />
+                                                <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                                                    {formatPublishedAt(row.publishedAt)}
+                                                </p>
+                                                <div className="flex items-center justify-start gap-[10px]">
+                                                    <button
+                                                        onClick={() =>
+                                                            navigate(
+                                                                `/listingpropertydetail?id=${encodeURIComponent(row._id)}`
+                                                            )
+                                                        }
+                                                        type="button"
+                                                        className="cursor-pointer p-[6px]"
+                                                        aria-label="Edit property"
+                                                    >
+                                                        <EditIcon width={20} height={20} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="cursor-pointer p-[6px]"
+                                                        aria-label="Delete property"
+                                                    >
+                                                        <TrashIcon width={20} height={20} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-[10px]">
-                                            <img src={row.agentImg} alt="img" className="w-[40px] h-[40px] rounded-[12px] object-cover border border-[rgba(34,34,34,0.08)]" />
-                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.agentname}</p>
-                                        </div>
-                                        <div className="flex items-center gap-[10px]">
-                                            <img src={row.agencyImg} alt="img" className="w-[40px] h-[40px] rounded-[12px] object-cover border border-[rgba(34,34,34,0.08)]" />
-                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.agencyname}</p>
-                                        </div>
-                                        {/* <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.phone}</p>
-                                        <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.email}</p> */}
-                                        <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.listingtype}</p>
-                                        <div className="flex items-center justify-start gap-[10px]">
-                                            <button onClick={() => navigate(`/listingpropertydetail`)} type="button" className="cursor-pointer p-[6px] " aria-label="View">
-                                                <EditIcon width={20} height={20} />
-                                            </button>
-                                            <button type="button" className="cursor-pointer p-[6px] " aria-label="Delete">
-                                                <TrashIcon width={20} height={20} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                {/* Pagenation */}
                 <Pagenation
                     currentPage={currentPage}
-                    totalItems={rowData.length}
-                    itemsPerPage={itemsPerPage}
+                    totalItems={totalProperties}
+                    itemsPerPage={ITEMS_PER_PAGE}
                     onPageChange={setCurrentPage}
                 />
             </div>
@@ -598,4 +1125,4 @@ function ListingProperty() {
     );
 }
 
-export default ListingProperty;   
+export default ListingProperty;
