@@ -81,6 +81,19 @@ const resolveAgentAvatarSrc = (
   return `${base}/${encodeURIComponent(raw)}`;
 };
 
+const resolveAgencyAvatarSrc = (
+  agency: AdminAgentListItem["agency"],
+  agencyImgBaseUrl: string
+): string => {
+  if (!agency) return profileless;
+  const raw = (agency.profilePicture || "").trim();
+  if (!raw || isPlaceholderProfilePicture(raw)) return profileless;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  const base = (agencyImgBaseUrl || "").trim().replace(/\/+$/, "");
+  if (!base) return agency.profilePictureUrl?.trim() || profileless;
+  return `${base}/${encodeURIComponent(raw)}`;
+};
+
 const formatAgentType = (value?: string) => {
   if (!value) return "—";
   if (value === "superagent") return "Super Agent";
@@ -176,6 +189,7 @@ export default function AgentAccount() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [agentImgBaseUrl, setAgentImgBaseUrl] = useState("");
+  const [agencyImgBaseUrl, setAgencyImgBaseUrl] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
   const selectedAgencyLabel =
@@ -194,8 +208,12 @@ export default function AgentAccount() {
         );
         if (!mounted) return;
         setAgentImgBaseUrl((data.supportedUrls?.agentUrl?.img || "").trim());
+        setAgencyImgBaseUrl((data.supportedUrls?.agencyUrl?.img || "").trim());
       } catch {
-        if (mounted) setAgentImgBaseUrl("");
+        if (mounted) {
+          setAgentImgBaseUrl("");
+          setAgencyImgBaseUrl("");
+        }
       }
     };
     void loadUrls();
@@ -518,9 +536,19 @@ export default function AgentAccount() {
                         <p className="text-[12px] font-[Regular] text-[#222] truncate">
                           {row.email || "—"}
                         </p>
-                        <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                          {row.agency?.agencyName || "—"}
-                        </p>
+                        <div className="flex items-center gap-[10px] min-w-0">
+                          <img
+                            src={resolveAgencyAvatarSrc(row.agency, agencyImgBaseUrl)}
+                            alt={row.agency?.agencyName || "Agency"}
+                            className="w-[40px] h-[40px] rounded-[12px] object-cover border border-[rgba(34,34,34,0.08)] shrink-0"
+                            onError={(e) => {
+                              e.currentTarget.src = profileless;
+                            }}
+                          />
+                          <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                            {row.agency?.agencyName || "—"}
+                          </p>
+                        </div>
                         <p className="text-[12px] font-[Regular] text-[#222] truncate">
                           {formatAgentType(row.agentType)}
                         </p>

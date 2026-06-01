@@ -32,13 +32,15 @@ export const agenciesService = {
   },
   listAgenciesForDropdown(search?: string, signal?: AbortSignal) {
     const searchParams = new URLSearchParams();
-    searchParams.set("limit", "10");
     if (search?.trim()) searchParams.set("search", search.trim());
     const qs = searchParams.toString();
-    return apiClient.get<AgenciesDropdownResponse>(`/agency/agents?${qs}`, {
-      auth: true,
-      signal,
-    });
+    return apiClient.get<AgenciesDropdownResponse>(
+      `/agency/list${qs ? `?${qs}` : ""}`,
+      {
+        auth: true,
+        signal,
+      }
+    );
   },
   getAgencyById(id: string, signal?: AbortSignal) {
     return apiClient.get<AgencyDetailResponse>(`/agency/${encodeURIComponent(id)}`, {

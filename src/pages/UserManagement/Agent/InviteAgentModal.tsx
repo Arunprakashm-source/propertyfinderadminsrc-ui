@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CancelIcon, DownArrowIcon } from "../../../assets/icons";
 import Loader from "../../../components/Loader/loader";
 import { useToast } from "../../../context/ToastContext";
@@ -23,6 +23,9 @@ export default function InviteAgentModal({
   defaultAgencyId = "",
 }: InviteAgentModalProps) {
   const { push } = useToast();
+  const agencyDropdownRef = useRef<HTMLDivElement>(null);
+  const agentTypeDropdownRef = useRef<HTMLDivElement>(null);
+
   const [agencies, setAgencies] = useState<AgencyDropdownItem[]>([]);
   const [agentTypes, setAgentTypes] = useState<AgentTypeOption[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(false);
@@ -31,6 +34,17 @@ export default function InviteAgentModal({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAgencyDropdownOpen, setIsAgencyDropdownOpen] = useState(false);
+  const [isAgentTypeDropdownOpen, setIsAgentTypeDropdownOpen] = useState(false);
+
+  const selectedAgencyLabel =
+    agencies.find((a) => a._id === agencyId)?.agencyName ||
+    agencies.find((a) => a._id === agencyId)?.email ||
+    "Select agency";
+
+  const selectedAgentTypeLabel =
+    agentTypes.find((t) => t.value === agentType)?.name ||
+    (agentType === "superagent" ? "Super Agent" : agentType === "agent" ? "Agent" : "Select agent type");
 
   useEffect(() => {
     if (!isOpen) {
@@ -39,6 +53,8 @@ export default function InviteAgentModal({
       setFullName("");
       setEmail("");
       setIsSubmitting(false);
+      setIsAgencyDropdownOpen(false);
+      setIsAgentTypeDropdownOpen(false);
       return;
     }
 
@@ -76,6 +92,19 @@ export default function InviteAgentModal({
       controller.abort();
     };
   }, [isOpen, defaultAgencyId, push]);
+
+  useEffect(() => {
+    if (!isAgencyDropdownOpen && !isAgentTypeDropdownOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (agencyDropdownRef.current?.contains(target)) return;
+      if (agentTypeDropdownRef.current?.contains(target)) return;
+      setIsAgencyDropdownOpen(false);
+      setIsAgentTypeDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isAgencyDropdownOpen, isAgentTypeDropdownOpen]);
 
   if (!isOpen) return null;
 
@@ -116,6 +145,8 @@ export default function InviteAgentModal({
     }
   };
 
+  const dropdownDisabled = isSubmitting || loadingOptions;
+
   return (
     <div
       className="fixed inset-0 bg-black/40 flex justify-center md:items-center items-end z-[9999]"
@@ -144,47 +175,116 @@ export default function InviteAgentModal({
           <div className="flex flex-col gap-[20px] mt-[35px]">
             <div>
               <label className="text-[14px] font-[Bold] text-[#222] block mb-[6px]">Agency</label>
-              <div className="relative">
-                <select
-                  value={agencyId}
-                  onChange={(e) => setAgencyId(e.target.value)}
-                  disabled={isSubmitting || loadingOptions}
-                  className="h-[44px] w-full appearance-none rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] pr-[36px] text-[14px] font-[Medium] text-[#222] focus:outline-none bg-white"
+              <div className="relative" ref={agencyDropdownRef}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={() => {
+                    if (dropdownDisabled) return;
+                    setIsAgentTypeDropdownOpen(false);
+                    setIsAgencyDropdownOpen((open) => !open);
+                  }}
+                  disabled={dropdownDisabled}
+                  className="flex w-full items-center justify-between gap-[8px] border border-[rgba(34,34,34,0.10)] bg-white rounded-[10px] px-[12px] h-[44px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <option value="">Select agency</option>
-                  {agencies.map((agency) => (
-                    <option key={agency._id} value={agency._id}>
-                      {agency.agencyName || agency.email || agency._id}
-                    </option>
-                  ))}
-                </select>
-                <DownArrowIcon
-                  className="pointer-events-none absolute right-[12px] top-1/2 -translate-y-1/2"
-                  width={14}
-                  height={14}
-                />
+                  <span
+                    className={`text-[14px] font-[Medium] truncate ${
+                      agencyId ? "text-[#222]" : "text-[#707070]"
+                    }`}
+                  >
+                    {selectedAgencyLabel}
+                  </span>
+                  <DownArrowIcon
+                    className={`shrink-0 transition-transform duration-200 ${
+                      isAgencyDropdownOpen ? "rotate-180" : ""
+                    }`}
+                    width={14}
+                    height={14}
+                  />
+                </button>
+                {isAgencyDropdownOpen && (
+                  <div className="absolute left-0 top-[calc(100%+7px)] w-full max-h-[240px] overflow-y-auto bg-white border border-[#EAEAEA] rounded-[10px] shadow-[0_4px_15px_rgba(0,0,0,0.1)] py-[8px] z-[10001]">
+                    {agencies.length === 0 ? (
+                      <p className="px-[16px] py-[10px] text-[13px] font-[Regular] text-[#707070]">
+                        No agencies available
+                      </p>
+                    ) : (
+                      agencies.map((agency) => (
+                        <button
+                          key={agency._id}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setAgencyId(agency._id);
+                            setIsAgencyDropdownOpen(false);
+                          }}
+                          className={`w-full px-[16px] py-[10px] text-left text-[13px] font-[Medium] cursor-pointer hover:bg-[#F5F5F5] transition-colors truncate ${
+                            agencyId === agency._id
+                              ? "text-[#3182CE] bg-[#F5F5F5]"
+                              : "text-[#222]"
+                          }`}
+                        >
+                          {agency.agencyName || agency.email || agency._id}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div>
               <label className="text-[14px] font-[Bold] text-[#222] block mb-[6px]">Agent type</label>
-              <div className="relative">
-                <select
-                  value={agentType}
-                  onChange={(e) => setAgentType(e.target.value)}
-                  disabled={isSubmitting || loadingOptions}
-                  className="h-[44px] w-full appearance-none rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] pr-[36px] text-[14px] font-[Medium] text-[#222] focus:outline-none bg-white"
+              <div className="relative" ref={agentTypeDropdownRef}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={() => {
+                    if (dropdownDisabled) return;
+                    setIsAgencyDropdownOpen(false);
+                    setIsAgentTypeDropdownOpen((open) => !open);
+                  }}
+                  disabled={dropdownDisabled}
+                  className="flex w-full items-center justify-between gap-[8px] border border-[rgba(34,34,34,0.10)] bg-white rounded-[10px] px-[12px] h-[44px] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {agentTypes.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.name}
-                    </option>
-                  ))}
-                </select>
-                <DownArrowIcon
-                  className="pointer-events-none absolute right-[12px] top-1/2 -translate-y-1/2"
-                  width={14}
-                  height={14}
-                />
+                  <span className="text-[14px] font-[Medium] text-[#222] truncate">
+                    {selectedAgentTypeLabel}
+                  </span>
+                  <DownArrowIcon
+                    className={`shrink-0 transition-transform duration-200 ${
+                      isAgentTypeDropdownOpen ? "rotate-180" : ""
+                    }`}
+                    width={14}
+                    height={14}
+                  />
+                </button>
+                {isAgentTypeDropdownOpen && (
+                  <div className="absolute left-0 top-[calc(100%+7px)] w-full bg-white border border-[#EAEAEA] rounded-[10px] shadow-[0_4px_15px_rgba(0,0,0,0.1)] py-[8px] z-[10001] flex flex-col">
+                    {agentTypes.length === 0 ? (
+                      <p className="px-[16px] py-[10px] text-[13px] font-[Regular] text-[#707070]">
+                        No agent types available
+                      </p>
+                    ) : (
+                      agentTypes.map((type) => (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setAgentType(type.value);
+                            setIsAgentTypeDropdownOpen(false);
+                          }}
+                          className={`w-full px-[16px] py-[10px] text-left text-[13px] font-[Medium] cursor-pointer hover:bg-[#F5F5F5] transition-colors ${
+                            agentType === type.value
+                              ? "text-[#3182CE] bg-[#F5F5F5]"
+                              : "text-[#222]"
+                          }`}
+                        >
+                          {type.name}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div>

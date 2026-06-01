@@ -134,6 +134,8 @@ export type AgencyDropdownItem = {
   _id: string;
   agencyName?: string;
   email?: string;
+  profilePicture?: string | null;
+  profilePictureUrl?: string | null;
   isVerified?: boolean;
   isActive?: boolean;
   invitationStatus?: string;
@@ -176,6 +178,8 @@ export type AdminAgentListItem = {
     _id?: string;
     agencyName?: string;
     email?: string;
+    profilePicture?: string | null;
+    profilePictureUrl?: string | null;
   } | null;
   createdAt?: string;
   lastLogin?: string;
