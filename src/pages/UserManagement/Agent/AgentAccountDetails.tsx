@@ -10,6 +10,7 @@ import { getApiErrorMessage, isAbortError } from "../../../services/apiClient";
 import { agentsService } from "../../../services/agentsService";
 import type {
   AdminAgentDetail,
+  AgentExperienceOption,
   AgentTypeOption,
   CountryOption,
   JobTitleOption,
@@ -80,6 +81,7 @@ export default function AgentAccountDetail() {
   const countryDropdownRef = useRef<HTMLDivElement>(null);
   const agentTypeDropdownRef = useRef<HTMLDivElement>(null);
   const jobTitleDropdownRef = useRef<HTMLDivElement>(null);
+  const experienceDropdownRef = useRef<HTMLDivElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -88,11 +90,13 @@ export default function AgentAccountDetail() {
   const [countries, setCountries] = useState<CountryOption[]>([]);
   const [agentTypes, setAgentTypes] = useState<AgentTypeOption[]>([]);
   const [jobTitles, setJobTitles] = useState<JobTitleOption[]>([]);
+  const [experienceOptions, setExperienceOptions] = useState<AgentExperienceOption[]>([]);
   const [form, setForm] = useState<FormState>(initialState);
   const [isPhoneDropdownOpen, setIsPhoneDropdownOpen] = useState(false);
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
   const [isAgentTypeDropdownOpen, setIsAgentTypeDropdownOpen] = useState(false);
   const [isJobTitleDropdownOpen, setIsJobTitleDropdownOpen] = useState(false);
+  const [isExperienceDropdownOpen, setIsExperienceDropdownOpen] = useState(false);
   const [phoneSearchQuery, setPhoneSearchQuery] = useState("");
   const [countrySearchQuery, setCountrySearchQuery] = useState("");
   const [selectedPhoneCountry, setSelectedPhoneCountry] = useState<CountryOption | null>(null);
@@ -148,6 +152,11 @@ export default function AgentAccountDetail() {
     return match?.title || "Select job title";
   }, [jobTitles, form.specializationId]);
 
+  const selectedExperienceLabel = useMemo(() => {
+    const match = experienceOptions.find((o) => o.value === form.experience);
+    return match?.name || "Select experience";
+  }, [experienceOptions, form.experience]);
+
   const formatDateTime = (value?: string | null) => {
     if (!value) return "—";
     const d = new Date(value);
@@ -174,11 +183,12 @@ export default function AgentAccountDetail() {
       }
       setLoading(true);
       try {
-        const [details, countryList, types, titles] = await Promise.all([
+        const [details, countryList, types, titles, experienceRes] = await Promise.all([
           agentsService.getAgentById(agentId, controller.signal),
           agentsService.listMasterCountries(controller.signal),
           agentsService.getAgentTypes(controller.signal),
           agentsService.listJobTitles(controller.signal),
+          agentsService.getAgentExperienceOptions(controller.signal),
         ]);
         if (!mounted) return;
         const nextAgent = details.agent;
@@ -194,6 +204,7 @@ export default function AgentAccountDetail() {
         setCountries(countryList);
         setAgentTypes(types.agentTypes ?? []);
         setJobTitles(titles);
+        setExperienceOptions(experienceRes.agentExperience ?? []);
         setSelectedCountry(matchedCountry);
         setSelectedPhoneCountry(matchedCountry);
         setForm({
@@ -244,6 +255,9 @@ export default function AgentAccountDetail() {
       if (jobTitleDropdownRef.current && !jobTitleDropdownRef.current.contains(event.target as Node)) {
         setIsJobTitleDropdownOpen(false);
       }
+      if (experienceDropdownRef.current && !experienceDropdownRef.current.contains(event.target as Node)) {
+        setIsExperienceDropdownOpen(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -271,7 +285,7 @@ export default function AgentAccountDetail() {
         agentType: form.agentType,
         specialization: form.specializationId || undefined,
         brokerLicenseNumber: form.brokerLicenseNumber.trim(),
-        experience: form.experience ? Number(form.experience) : undefined,
+        experience: form.experience.trim() || undefined,
         whatsappNumber: form.whatsappNumber.trim(),
         aboutMe: form.aboutMe.trim(),
         isActive: form.isActive,
@@ -523,7 +537,7 @@ export default function AgentAccountDetail() {
               </div>
             </div>
           </div>
-          <div>
+          {/* <div>
             <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[6px]">WhatsApp Number</label>
             <input
               value={form.whatsappNumber}
@@ -531,7 +545,7 @@ export default function AgentAccountDetail() {
               type="text"
               className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] text-[13px] font-[Medium] text-[#222] focus:outline-none"
             />
-          </div>
+          </div> */}
           <div>
             <label className="block text-[14px] font-[SemiBold] text-[#222] mb-[8px]">Country</label>
             <div className="relative w-full" ref={countryDropdownRef}>
@@ -645,14 +659,33 @@ export default function AgentAccountDetail() {
             </div>
           </div>
           <div>
-            <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[6px]">Experience (years)</label>
-            <input
-              value={form.experience}
-              onChange={(e) => updateForm("experience", e.target.value)}
-              type="number"
-              min={0}
-              className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] text-[13px] font-[Medium] text-[#222] focus:outline-none"
-            />
+            <label className="block text-[14px] font-[SemiBold] text-[#222] mb-[8px]">Experience (years)</label>
+            <div className="relative w-full" ref={experienceDropdownRef}>
+              <div
+                className="flex items-center justify-between border border-[#EAEAEA] rounded-[10px] px-[12px] h-[44px] bg-white cursor-pointer select-none"
+                onClick={() => setIsExperienceDropdownOpen((prev) => !prev)}
+              >
+                <span className="text-[13px] font-[Medium] text-[#222] truncate">{selectedExperienceLabel}</span>
+                <DownArrowIcon className={`transition-transform ${isExperienceDropdownOpen ? "rotate-180" : ""}`} width={14} height={14} />
+              </div>
+              {isExperienceDropdownOpen && (
+                <div className="absolute top-[50px] left-0 w-full bg-white border border-[#EAEAEA] rounded-[10px] shadow-[0_4px_15px_rgba(0,0,0,0.1)] z-10 max-h-[220px] overflow-y-auto py-[8px]">
+                  {experienceOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className="w-full text-left px-[14px] py-[8px] text-[13px] font-[Medium] text-[#222] hover:bg-[#F5F5F5]"
+                      onClick={() => {
+                        updateForm("experience", option.value);
+                        setIsExperienceDropdownOpen(false);
+                      }}
+                    >
+                      {option.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[6px]">Broker License</label>
@@ -742,11 +775,11 @@ export default function AgentAccountDetail() {
             ["Sale Properties", stats?.totalSaleProperties],
             ["Total Inquiries", stats?.totalInquiries],
             ["New Inquiries", stats?.newInquiries],
-            ["Total Deals", stats?.totalDeals],
-            ["Deals Closed (Sale)", stats?.dealsClosedSales],
-            ["Deals Closed (Rent)", stats?.dealsClosedRent],
-            ["Revenue (Sale)", stats?.totalRevenueSales],
-            ["Revenue (Rent)", stats?.totalRevenueRent],
+            // ["Total Deals", stats?.totalDeals],
+            // ["Deals Closed (Sale)", stats?.dealsClosedSales],
+            // ["Deals Closed (Rent)", stats?.dealsClosedRent],
+            // ["Revenue (Sale)", stats?.totalRevenueSales],
+            // ["Revenue (Rent)", stats?.totalRevenueRent],
           ].map(([label, value]) => (
             <div key={String(label)}>
               <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[6px]">{label}</label>

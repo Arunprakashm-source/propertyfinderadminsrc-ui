@@ -1,18 +1,26 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { DownArrowIcon } from "../../../assets/icons";
 import profileimg from "../../../assets/img/profileless.png";
 import Header from "../../../components/Header/Header";
 import Loader from "../../../components/Loader/loader";
 import { agentsService } from "../../../services/agentsService";
 import { getApiErrorMessage, isAbortError } from "../../../services/apiClient";
 import { useToast } from "../../../context/ToastContext";
-import type { AdminAgentDetail, AgentTypeOption, JobTitleOption } from "../../../types/api";
+import type { AdminAgentDetail, AgentExperienceOption } from "../../../types/api";
 
 const formatAgentType = (value?: string) => {
   if (!value) return "—";
   if (value === "superagent") return "Super Agent";
   return "Agent";
+};
+
+const formatExperience = (
+  value: string | number | null | undefined,
+  options: AgentExperienceOption[]
+) => {
+  if (value == null || value === "") return "—";
+  const key = String(value);
+  return options.find((o) => o.value === key)?.name || key;
 };
 
 const AgentAccView = () => {
@@ -23,17 +31,10 @@ const AgentAccView = () => {
 
   const [agent, setAgent] = useState<AdminAgentDetail | null>(null);
   const [agentImgBaseUrl, setAgentImgBaseUrl] = useState("");
-  const [agentTypes, setAgentTypes] = useState<AgentTypeOption[]>([]);
-  const [jobTitles, setJobTitles] = useState<JobTitleOption[]>([]);
-  const [reviewAgentType, setReviewAgentType] = useState("agent");
-  const [reviewSpecializationId, setReviewSpecializationId] = useState("");
+  const [experienceOptions, setExperienceOptions] = useState<AgentExperienceOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<"approve" | "decline" | null>(null);
-  const [isAgentTypeOpen, setIsAgentTypeOpen] = useState(false);
-  const [isJobTitleOpen, setIsJobTitleOpen] = useState(false);
-  const agentTypeRef = useRef<HTMLDivElement>(null);
-  const jobTitleRef = useRef<HTMLDivElement>(null);
 
   const formatDateTime = (value?: string | null) => {
     if (!value) return "—";
@@ -84,29 +85,6 @@ const AgentAccView = () => {
   const yesNo = (value?: boolean) => (value ? "Yes" : "No");
   const onOff = (value?: boolean) => (value ? "On" : "Off");
 
-  const reviewAgentTypeLabel = useMemo(() => {
-    const match = agentTypes.find((t) => t.value === reviewAgentType);
-    return match?.name || formatAgentType(reviewAgentType);
-  }, [agentTypes, reviewAgentType]);
-
-  const reviewJobTitleLabel = useMemo(() => {
-    const match = jobTitles.find((j) => j._id === reviewSpecializationId);
-    return match?.title || "Select job title";
-  }, [jobTitles, reviewSpecializationId]);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (agentTypeRef.current && !agentTypeRef.current.contains(event.target as Node)) {
-        setIsAgentTypeOpen(false);
-      }
-      if (jobTitleRef.current && !jobTitleRef.current.contains(event.target as Node)) {
-        setIsJobTitleOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   useEffect(() => {
     let mounted = true;
     const controller = new AbortController();
@@ -119,22 +97,15 @@ const AgentAccView = () => {
       setLoading(true);
       setError(null);
       try {
-        const [details, urls, types, titles] = await Promise.all([
+        const [details, urls, experienceRes] = await Promise.all([
           agentsService.getAgentById(agentId, controller.signal),
           agentsService.getSupportedUrls(controller.signal),
-          agentsService.getAgentTypes(controller.signal),
-          agentsService.listJobTitles(controller.signal),
+          agentsService.getAgentExperienceOptions(controller.signal),
         ]);
         if (!mounted) return;
-        const nextAgent = details.agent || null;
-        setAgent(nextAgent);
+        setAgent(details.agent || null);
         setAgentImgBaseUrl((urls.supportedUrls?.agentUrl?.img || "").trim());
-        setAgentTypes(types.agentTypes ?? []);
-        setJobTitles(titles);
-        setReviewAgentType(nextAgent?.agentType || "agent");
-        setReviewSpecializationId(
-          nextAgent?.specialization?._id || titles[0]?._id || ""
-        );
+        setExperienceOptions(experienceRes.agentExperience ?? []);
       } catch (err) {
         if (!mounted || isAbortError(err)) return;
         setError(getApiErrorMessage(err, "Failed to load agent details"));
@@ -151,21 +122,30 @@ const AgentAccView = () => {
 
   const handleReviewAction = async (action: "approve" | "decline") => {
     if (!agentId) return;
-    if (action === "approve" && !reviewSpecializationId) {
-      push({
-        type: "error",
-        title: "Job title required",
-        description: "Select a job title before approving this agent.",
-      });
-      return;
+    if (action === "approve") {
+      const specializationId = agent?.specialization?._id?.trim();
+      if (!specializationId) {
+        push({
+          type: "error",
+          title: "Job title required",
+          description:
+            "This agent has no job title. Open agent detail, set job title and agent type, then approve.",
+        });
+        return;
+      }
     }
     try {
       setActionLoading(action);
-      const data = await agentsService.verifyAgent(agentId, {
-        action,
-        specializationId: action === "approve" ? reviewSpecializationId : undefined,
-        agentType: action === "approve" ? reviewAgentType : undefined,
-      });
+      const data = await agentsService.verifyAgent(
+        agentId,
+        action === "approve"
+          ? {
+              action,
+              specializationId: agent?.specialization?._id?.trim(),
+              agentType: agent?.agentType?.trim() || "agent",
+            }
+          : { action }
+      );
       const updated = data.agent;
       if (updated) setAgent((prev) => ({ ...(prev || {}), ...updated }));
       push({
@@ -242,7 +222,7 @@ const AgentAccView = () => {
                 {row("Country", agent?.nationality?.name || agent?.nationality?.code || "—")}
                 {row("Agent Type", formatAgentType(agent?.agentType))}
                 {row("Job Title", agent?.specialization?.title || "—")}
-                {row("Experience", agent?.experience != null ? String(agent.experience) : "—")}
+                {row("Experience", formatExperience(agent?.experience, experienceOptions))}
                 {row("Broker License", agent?.brokerLicenseNumber || "—")}
                 {row("Agency", agent?.agency?.agencyName || "—")}
                 {row("Agent Verified", yesNo(agent?.isVerified))}
@@ -273,70 +253,6 @@ const AgentAccView = () => {
                 </div>
               ) : (
                 <>
-                  {canReview && (
-                    <div className="flex flex-wrap gap-3 w-full md:w-auto mb-2 md:mb-0">
-                      <div className="relative min-w-[160px]" ref={jobTitleRef}>
-                        <button
-                          type="button"
-                          onClick={() => setIsJobTitleOpen((o) => !o)}
-                          className="flex w-full items-center justify-between gap-2 border border-[rgba(34,34,34,0.10)] rounded-full px-[14px] h-[38px] text-[12px] font-[SemiBold] text-[#222] bg-white"
-                        >
-                          <span className="truncate">{reviewJobTitleLabel}</span>
-                          <DownArrowIcon className={`shrink-0 ${isJobTitleOpen ? "rotate-180" : ""}`} width={12} height={12} />
-                        </button>
-                        {isJobTitleOpen && (
-                          <div className="absolute bottom-[44px] left-0 right-0 max-h-[200px] overflow-y-auto bg-white border border-[#EAEAEA] rounded-[10px] shadow-lg z-20 py-2">
-                            {jobTitles.map((title) => (
-                              <button
-                                key={title._id}
-                                type="button"
-                                className="w-full text-left px-3 py-2 text-[12px] hover:bg-[#F5F5F5]"
-                                onClick={() => {
-                                  setReviewSpecializationId(title._id);
-                                  setIsJobTitleOpen(false);
-                                }}
-                              >
-                                {title.title}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="relative min-w-[140px]" ref={agentTypeRef}>
-                        <button
-                          type="button"
-                          onClick={() => setIsAgentTypeOpen((o) => !o)}
-                          className="flex w-full items-center justify-between gap-2 border border-[rgba(34,34,34,0.10)] rounded-full px-[14px] h-[38px] text-[12px] font-[SemiBold] text-[#222] bg-white"
-                        >
-                          <span>{reviewAgentTypeLabel}</span>
-                          <DownArrowIcon className={`shrink-0 ${isAgentTypeOpen ? "rotate-180" : ""}`} width={12} height={12} />
-                        </button>
-                        {isAgentTypeOpen && (
-                          <div className="absolute bottom-[44px] left-0 right-0 bg-white border border-[#EAEAEA] rounded-[10px] shadow-lg z-20 py-2">
-                            {(agentTypes.length
-                              ? agentTypes
-                              : [
-                                  { name: "Agent", value: "agent" },
-                                  { name: "Super Agent", value: "superagent" },
-                                ]
-                            ).map((type) => (
-                              <button
-                                key={type.value}
-                                type="button"
-                                className="w-full text-left px-3 py-2 text-[12px] hover:bg-[#F5F5F5]"
-                                onClick={() => {
-                                  setReviewAgentType(type.value);
-                                  setIsAgentTypeOpen(false);
-                                }}
-                              >
-                                {type.name}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
                   <button
                     type="button"
                     disabled={!canReview || actionLoading !== null}

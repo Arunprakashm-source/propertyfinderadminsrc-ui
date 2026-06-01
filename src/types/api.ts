@@ -152,6 +152,15 @@ export type MasterDataAgentTypesResponse = {
   agentTypes?: AgentTypeOption[];
 };
 
+export type AgentExperienceOption = {
+  name: string;
+  value: string;
+};
+
+export type MasterDataAgentExperienceResponse = {
+  agentExperience?: AgentExperienceOption[];
+};
+
 export type AdminAgentListItem = {
   _id: string;
   fullName?: string;
@@ -254,7 +263,7 @@ export type AdminAgentDetail = {
   isEmailVerified?: boolean;
   isPhoneVerified?: boolean;
   brokerLicenseNumber?: string;
-  experience?: number;
+  experience?: string | number;
   description?: string;
   aboutMe?: string;
   preferences?: {
@@ -283,7 +292,7 @@ export type UpdateAgentPayload = {
   agentType?: string;
   specialization?: string;
   brokerLicenseNumber?: string;
-  experience?: number;
+  experience?: string | number;
   whatsappNumber?: string;
   aboutMe?: string;
   description?: string;

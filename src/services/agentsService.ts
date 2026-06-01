@@ -7,6 +7,7 @@ import type {
   InviteAgentResponse,
   JobTitleOption,
   ListAgentsParams,
+  MasterDataAgentExperienceResponse,
   MasterDataAgentTypesResponse,
   MasterDataCountriesResponse,
   MasterDataJobTitlesResponse,
@@ -91,6 +92,12 @@ export const agentsService = {
   getAgentTypes(signal?: AbortSignal) {
     return apiClient.get<MasterDataAgentTypesResponse>(
       "/master-data?types=agenttypes",
+      { auth: true, signal }
+    );
+  },
+  getAgentExperienceOptions(signal?: AbortSignal) {
+    return apiClient.get<MasterDataAgentExperienceResponse>(
+      "/master-data?types=agentexperience",
       { auth: true, signal }
     );
   },
