@@ -15,10 +15,12 @@ import Header from "../../../components/Header/Header";
 import Loader from "../../../components/Loader/loader";
 import Pagenation from "../../../components/Pagenation/Pagenation";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 import { agenciesService } from "../../../services/agenciesService";
 import { agentsService } from "../../../services/agentsService";
 import { getApiErrorMessage } from "../../../services/apiClient";
 import { propertiesService } from "../../../services/propertiesService";
+import { useToast } from "../../../context/ToastContext";
 import type {
     AdminPropertyListItem,
     AgencyDropdownItem,
@@ -223,6 +225,7 @@ const formatPublishedAt = (value?: string) => {
 
 function ListingProperty() {
     const navigate = useNavigate();
+    const { push } = useToast();
 
     const [fromDate, setFromDate] = useState<Date | null>(null);
     const [toDate, setToDate] = useState<Date | null>(null);
@@ -500,6 +503,42 @@ function ListingProperty() {
     }, [selectedAgent?._id, selectedAgency?._id, selectedLocation, fromDate, toDate]);
 
     const calendarCells = getCalendarCells(displayMonth);
+
+    const handleDeleteProperty = useCallback(
+        async (property: AdminPropertyListItem) => {
+            const label = property.title?.trim() || "this property";
+            const result = await Swal.fire({
+                title: "Delete property?",
+                text: `This will permanently delete ${label} and related data.`,
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Yes, delete",
+                cancelButtonText: "Cancel",
+                confirmButtonColor: "#EA3934",
+                reverseButtons: true,
+            });
+            if (!result.isConfirmed) return;
+
+            try {
+                await propertiesService.deleteProperty(property._id);
+                push({
+                    type: "success",
+                    title: "Property deleted",
+                    description: "Property and related records were deleted successfully.",
+                });
+                const controller = new AbortController();
+                await loadProperties(controller.signal);
+                controller.abort();
+            } catch (err) {
+                push({
+                    type: "error",
+                    title: "Delete failed",
+                    description: getApiErrorMessage(err, "Failed to delete property"),
+                });
+            }
+        },
+        [loadProperties, push]
+    );
 
     const shiftMonth = (direction: -1 | 1) => {
         setDisplayMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + direction, 1));
@@ -1100,6 +1139,7 @@ function ListingProperty() {
                                                     </button>
                                                     <button
                                                         type="button"
+                                                        onClick={() => void handleDeleteProperty(row)}
                                                         className="cursor-pointer p-[6px]"
                                                         aria-label="Delete property"
                                                     >

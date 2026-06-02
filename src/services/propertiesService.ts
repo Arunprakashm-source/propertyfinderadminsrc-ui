@@ -105,6 +105,12 @@ export const propertiesService = {
       { auth: true, signal }
     );
   },
+  deleteProperty(id: string, signal?: AbortSignal) {
+    return apiClient.delete<{ status?: boolean; message?: string }>(
+      `/properties/${encodeURIComponent(id)}`,
+      { auth: true, signal }
+    );
+  },
   uploadPropertyMedia(formData: FormData, signal?: AbortSignal) {
     return apiClient.post<{
       uploads?: {

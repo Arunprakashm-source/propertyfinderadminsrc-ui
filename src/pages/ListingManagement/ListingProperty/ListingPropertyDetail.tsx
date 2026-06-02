@@ -24,6 +24,8 @@ const COMPLETION_STATUS_OPTIONS = [
     { name: "Off-plan", value: "off-plan" },
 ];
 
+type ListingDetailTabId = "details" | "additional";
+
 function ListingPropertyDetail() {
     const navigate = useNavigate();
     const { push } = useToast();
@@ -45,6 +47,8 @@ function ListingPropertyDetail() {
     const [initialVirtualTour360, setInitialVirtualTour360] = useState("");
     const [isSavingImages, setIsSavingImages] = useState(false);
     const [isSavingMedia, setIsSavingMedia] = useState(false);
+    const [readOnlyFields, setReadOnlyFields] = useState<Array<{ label: string; value: string }>>([]);
+    const [activeTab, setActiveTab] = useState<ListingDetailTabId>("details");
     const [title, setTitle] = useState("");
     const [bedrooms, setBedrooms] = useState("");
     const [bathrooms, setBathrooms] = useState("");
@@ -110,6 +114,19 @@ function ListingPropertyDetail() {
         return trimmed.includes("/") ? trimmed.split("/").pop() || "" : trimmed;
     }, []);
 
+    const formatDateTime = useCallback((value?: string | null) => {
+        if (!value) return "—";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "—";
+        return date.toLocaleString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    }, []);
+
     const selectedListingTypeLabel =
         listingTypeOptions.find((item) => item._id === selectedListingTypeId)?.name?.trim() ||
         "Select listing type";
@@ -127,6 +144,10 @@ function ListingPropertyDetail() {
         (item) => item._id === selectedListingTypeId
     );
     const isRentListing = selectedListingType?.transaction === "rent";
+    const tabs: { id: ListingDetailTabId; label: string }[] = [
+        { id: "details", label: "Property Details" },
+        { id: "additional", label: "Additional Details" },
+    ];
 
     const toggleAmenity = useCallback((amenityId: string) => {
         setSelectedAmenityIds((prev) =>
@@ -532,12 +553,78 @@ function ListingPropertyDetail() {
                     return base ? `${base}/${path}` : videoUrlRaw;
                 })();
                 setVideoPreviewUrl(videoUrl || null);
+
+                const p = property as Record<string, unknown>;
+                const locationObj = (property.location ?? {}) as Record<string, unknown>;
+                const coordinatesObj = (locationObj.coordinates ?? {}) as Record<string, unknown>;
+                const coordinates = Array.isArray(coordinatesObj.coordinates)
+                    ? coordinatesObj.coordinates
+                    : [];
+                const featuredObj = (p.featured ?? {}) as Record<string, unknown>;
+                const dealInfoObj = (p.dealInfo ?? {}) as Record<string, unknown>;
+                const dealCustomerObj = (dealInfoObj.customer ?? {}) as Record<string, unknown>;
+                const agentObj = (property.agent ?? {}) as Record<string, unknown>;
+                const agencyObj = (property.agency ?? {}) as Record<string, unknown>;
+
+                const toText = (value: unknown) => {
+                    if (value == null || value === "") return "—";
+                    if (typeof value === "boolean") return value ? "Yes" : "No";
+                    if (Array.isArray(value)) return value.length ? value.join(", ") : "—";
+                    return String(value);
+                };
+
+                setReadOnlyFields([
+                    { label: "Property ID", value: toText(property._id) },
+                    { label: "Slug", value: toText(property.slug) },
+                    { label: "Reference ID", value: toText(p.referenceId) },
+                    { label: "Status", value: toText(property.status) },
+                    { label: "Agent ID", value: toText(agentObj._id) },
+                    { label: "Agent Name", value: toText(agentObj.fullName ?? agentObj.name) },
+                    { label: "Agent Email", value: toText(agentObj.email) },
+                    { label: "Agent Phone", value: toText(agentObj.phoneNumber) },
+                    { label: "Agency ID", value: toText(agencyObj._id) },
+                    { label: "Agency Name", value: toText(agencyObj.agencyName ?? agencyObj.name) },
+                    { label: "Agency Email", value: toText(agencyObj.email) },
+                    { label: "Google Place ID", value: toText(locationObj.googlePlaceId) },
+                    { label: "Latitude", value: toText(coordinates[1]) },
+                    { label: "Longitude", value: toText(coordinates[0]) },
+                    { label: "Is Waterfront", value: toText(p.isWaterfront) },
+                    { label: "Is Superagent Listing", value: toText(p.isSuperagentListing) },
+                    { label: "Featured Priority", value: toText(featuredObj.priority) },
+                    { label: "Featured Until", value: formatDateTime(featuredObj.featuredUntil as string | undefined) },
+                    { label: "Meta Title", value: toText(p.metaTitle) },
+                    { label: "Meta Description", value: toText(p.metaDescription) },
+                    { label: "Meta Keywords", value: toText(p.metaKeywords as unknown) },
+                    { label: "Published At", value: formatDateTime(property.publishedAt) },
+                    { label: "Created At", value: formatDateTime(property.createdAt) },
+                    { label: "Updated At", value: formatDateTime(p.updatedAt as string | undefined) },
+                    { label: "Last Modified At", value: formatDateTime(p.lastModifiedAt as string | undefined) },
+                    { label: "Deactivated At", value: formatDateTime(p.deactivatedAt as string | undefined) },
+                    { label: "Views", value: toText(p.views) },
+                    { label: "Likes", value: toText(p.likes) },
+                    { label: "Inquiries", value: toText(p.inquiries) },
+                    { label: "Shares", value: toText(p.shares) },
+                    { label: "Contact Count", value: toText(p.contactCount) },
+                    { label: "Last Contacted At", value: formatDateTime(p.lastContactedAt as string | undefined) },
+                    { label: "Report Count", value: toText(p.reportCount) },
+                    { label: "Is Flagged", value: toText(p.isFlagged) },
+                    { label: "Flagged Reason", value: toText(p.flaggedReason) },
+                    { label: "Flagged At", value: formatDateTime(p.flaggedAt as string | undefined) },
+                    { label: "Deal Type", value: toText(dealInfoObj.dealType) },
+                    { label: "Deal Amount", value: toText(dealInfoObj.dealAmount) },
+                    { label: "Deal Closed Date", value: formatDateTime(dealInfoObj.dealClosedDate as string | undefined) },
+                    { label: "Deal Customer Name", value: toText(dealCustomerObj.name) },
+                    { label: "Deal Customer Email", value: toText(dealCustomerObj.email) },
+                    { label: "Deal Customer Phone", value: toText(dealCustomerObj.phone) },
+                    { label: "Allocation Ref", value: toText(p.allocationRef) },
+                ]);
             })
             .catch((err: unknown) => {
                 if (!mounted) return;
                 const message =
                     err instanceof Error ? err.message : "Failed to load property";
                 setPageError(message);
+                setReadOnlyFields([]);
             })
             .finally(() => {
                 if (mounted) setPageLoading(false);
@@ -547,12 +634,15 @@ function ListingPropertyDetail() {
             mounted = false;
             controller.abort();
         };
-    }, [propertyId]);
+    }, [propertyId, formatDateTime]);
 
     useEffect(() => {
+        if (activeTab !== "details") return;
         if (pageLoading || pageError || quill || !quillRef.current) return;
 
         try {
+            // Clear stale DOM from prior mounts before creating a fresh instance.
+            quillRef.current.innerHTML = "";
             const instance = new Quill(quillRef.current, {
                 theme: "snow",
                 modules: {
@@ -569,13 +659,22 @@ function ListingPropertyDetail() {
         } catch {
             setQuill(null);
         }
-    }, [pageLoading, pageError, quill]);
+    }, [activeTab, pageLoading, pageError, quill]);
 
     useEffect(() => {
         return () => {
             setQuill(null);
         };
     }, []);
+
+    useEffect(() => {
+        // Details tab is conditionally rendered. When we leave it, the editor DOM unmounts,
+        // so we must reset the instance and allow clean re-initialization on return.
+        if (activeTab !== "details") {
+            setQuill(null);
+            setHasHydratedDescription(false);
+        }
+    }, [activeTab]);
 
     const insertImageFromFile = (file: File) => {
         if (!quill) return;
@@ -593,6 +692,7 @@ function ListingPropertyDetail() {
     };
 
     useEffect(() => {
+        if (activeTab !== "details") return;
         if (!quill) return;
 
         // Hydrate once from API so we don't overwrite user edits afterward.
@@ -618,7 +718,7 @@ function ListingPropertyDetail() {
         return () => {
             quill.off("text-change", onTextChange);
         };
-    }, [quill, description, hasHydratedDescription]);
+    }, [activeTab, quill, description, hasHydratedDescription]);
 
     useEffect(() => {
         const input = imageInputRef.current;
@@ -742,10 +842,30 @@ function ListingPropertyDetail() {
 
             {/* Main Content */}
             <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
+                <div className="rounded-t-[12px] border-b border-[rgba(34,34,34,0.08)] overflow-x-auto">
+                    <div className="min-w-max flex items-center gap-[4px] mt-[8px]">
+                        {tabs.map((tab) => {
+                            const isActive = activeTab === tab.id;
+                            return (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`cursor-pointer p-[16px_24px] border-b-2 text-[13px] font-[SemiBold] whitespace-nowrap transition-colors ${isActive ? "text-[#0832AE] border-[#0832AE]" : "text-[#222] border-transparent"
+                                        }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
 
                 {/* Grid */}
 
                 <div className="space-y-[25px]">
+                    {activeTab === "details" && (
+                        <>
 
                     {/* ================= Basic Information ================= */}
 
@@ -1355,8 +1475,34 @@ function ListingPropertyDetail() {
                         onCityChange={setCity}
                         onFullAddressChange={setFullAddress}
                     />
+                        </>
+                    )}
+
+                    {activeTab === "additional" && (
+                    <div className="bg-white rounded-[12px] p-[20px] border border-[#EAEAEA] mt-[20px]">
+                        <h3 className="text-[18px] font-[Bold] text-[#222] mb-[20px]">
+                            Additional Details
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-[14px]">
+                            {readOnlyFields.map((field) => (
+                                <div key={field.label}>
+                                    <label className="block text-[13px] font-[SemiBold] text-[#222] mb-[6px]">
+                                        {field.label}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        readOnly
+                                        value={field.value}
+                                        className="h-[42px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-[#F9FAFB] px-[12px] text-[12px] font-[Medium] text-[#707070] focus:outline-none"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    )}
                 </div>
             </div>
+            {activeTab === "details" && (
             <div className="mt-[24px] flex items-center justify-end gap-[12px]">
                     <button
                         type="button"
@@ -1377,6 +1523,7 @@ function ListingPropertyDetail() {
                         {isSaving ? "Saving..." : "Save"}
                     </button>
             </div>
+            )}
             <input
                 ref={imageInputRef}
                 type="file"
