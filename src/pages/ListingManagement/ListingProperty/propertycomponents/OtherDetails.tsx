@@ -7,7 +7,7 @@ const OtherDetails = () => {
         <div className="rounded-[15px] bg-white md:p-[20px] p-[16px] border border-[#EAEAEA]">
             <h3 className="text-[20px] font-[Bold] text-[#222] mb-[20px]">Other details</h3>
             <div className="flex flex-col gap-[14px]">
-                <div>
+                {/* <div>
                     <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[6px]">
                         Number of bedrooms <span className="text-[#EA3934]">*</span>
                     </label>
@@ -60,7 +60,7 @@ const OtherDetails = () => {
                             <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[13px] text-[#707070]">Sq.ft</span>
                         </div>
                     </div>
-                </div>
+                </div> */}
 
                 <div>
                     <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[6px]">

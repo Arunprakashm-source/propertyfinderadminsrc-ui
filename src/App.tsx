@@ -36,7 +36,7 @@ function App() {
   return (
     <>
       <div className="whole_app">
-        <BrowserRouter basename="/admin">
+        <BrowserRouter basename="/panel">
           <Routes>
             <Route element={<ProtectedRoute><MainIndex /></ProtectedRoute>}>
               <Route path="/dashboard" element={<Dashboard />} />

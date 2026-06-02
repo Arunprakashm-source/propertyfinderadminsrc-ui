@@ -3,9 +3,12 @@ import type {
   ListPropertiesParams,
   ListingTypeMasterItem,
   MasterDataListingTypesResponse,
+  MasterDataPropertyClassificationResponse,
   MasterDataPropertyLocationsResponse,
+  NamedValueMasterItem,
   PropertiesListResponse,
   PropertyLocationOption,
+  PropertyTypeMasterItem,
   SupportedUrlsResponse,
 } from "../types/api";
 
@@ -52,5 +55,38 @@ export const propertiesService = {
       { auth: true, signal }
     );
     return (data.listingTypes ?? data.listingtypes ?? []).filter((item) => item?._id);
+  },
+  async getPropertyClassificationMasterData(
+    signal?: AbortSignal
+  ): Promise<{
+    listingTypes: ListingTypeMasterItem[];
+    propertyTypes: PropertyTypeMasterItem[];
+    furnishedStatus: NamedValueMasterItem[];
+  }> {
+    const data = await apiClient.get<MasterDataPropertyClassificationResponse>(
+      "/master-data?types=listingtypes,propertytypes,furnishedstatus",
+      { auth: true, signal }
+    );
+    const sortByOrder = <T extends { displayOrder?: number; name?: string }>(items: T[]) =>
+      [...items].sort((a, b) => {
+        const ao = Number(a.displayOrder ?? 999);
+        const bo = Number(b.displayOrder ?? 999);
+        if (ao !== bo) return ao - bo;
+        return String(a.name ?? "").localeCompare(String(b.name ?? ""));
+      });
+
+    const listingTypes = sortByOrder(
+      (data.listingTypes ?? data.listingtypes ?? []).filter(
+        (item) => item?._id && item.slug !== "new-projects"
+      )
+    );
+    const propertyTypes = sortByOrder(
+      (data.propertyTypes ?? data.propertytypes ?? []).filter((item) => item?._id)
+    );
+    const furnishedStatus = (data.furnishedStatus ?? data.furnishedstatus ?? []).filter(
+      (item) => item?.name && item?.value
+    );
+
+    return { listingTypes, propertyTypes, furnishedStatus };
   },
 };

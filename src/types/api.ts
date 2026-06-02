@@ -612,6 +612,29 @@ export type MasterDataListingTypesResponse = {
   listingtypes?: ListingTypeMasterItem[];
 };
 
+export type PropertyTypeMasterItem = {
+  _id: string;
+  name?: string;
+  slug?: string;
+  category?: string;
+  displayOrder?: number;
+  isActive?: boolean;
+};
+
+export type NamedValueMasterItem = {
+  name: string;
+  value: string;
+};
+
+export type MasterDataPropertyClassificationResponse = {
+  listingTypes?: ListingTypeMasterItem[];
+  listingtypes?: ListingTypeMasterItem[];
+  propertyTypes?: PropertyTypeMasterItem[];
+  propertytypes?: PropertyTypeMasterItem[];
+  furnishedStatus?: NamedValueMasterItem[];
+  furnishedstatus?: NamedValueMasterItem[];
+};
+
 export type ListPropertiesParams = {
   page?: number;
   limit?: number;

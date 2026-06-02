@@ -9,6 +9,7 @@ import {
     RightArrowIcon,
     SearchIcon,
     TrashIcon,
+    EyeDarkIcon
 } from "../../../assets/icons";
 import Header from "../../../components/Header/Header";
 import Loader from "../../../components/Loader/loader";
@@ -997,7 +998,7 @@ function ListingProperty() {
 
                             {loading ? (
                                 <div className="py-[40px] flex justify-center">
-                                    <Loader />
+                                    <Loader size={64} margin={0} />
                                 </div>
                             ) : properties.length === 0 ? (
                                 <p className="text-[13px] text-[#707070] py-[24px] text-center">
@@ -1095,7 +1096,7 @@ function ListingProperty() {
                                                         className="cursor-pointer p-[6px]"
                                                         aria-label="Edit property"
                                                     >
-                                                        <EditIcon width={20} height={20} />
+                                                        <EyeDarkIcon width={20} height={20} />
                                                     </button>
                                                     <button
                                                         type="button"
