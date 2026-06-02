@@ -12,7 +12,13 @@ const GALLERY_PAGE_SIZE = 12;
 type GalleryItem = {
     id: number;
     src: string;
+    file?: File;
+    source: "remote" | "local";
 };
+
+export type ImageSaveEntry =
+    | { kind: "remote"; src: string }
+    | { kind: "local"; file: File };
 
 const galleryImagess = [
     { id: 1, img: home1img },
@@ -58,6 +64,7 @@ const galleryImagess = [
 const initialGalleryItems: GalleryItem[] = galleryImagess.map((row) => ({
     id: row.id,
     src: row.img,
+    source: "local",
 }));
 
 const maxInitialId = galleryImagess.reduce((m, r) => Math.max(m, r.id), 0);
@@ -65,13 +72,25 @@ const maxInitialId = galleryImagess.reduce((m, r) => Math.max(m, r.id), 0);
 const isBlobUrl = (src: string) => src.startsWith("blob:");
 
 const urlsToGalleryItems = (urls: string[]): GalleryItem[] =>
-    urls.map((src, index) => ({ id: index + 1, src }));
+    urls.map((src, index) => ({ id: index + 1, src, source: "remote" }));
 
 type ImageSectionProps = {
     remoteImageUrls?: string[];
+    onLocalFilesChange?: (files: File[]) => void;
+    onSaveEntriesChange?: (entries: ImageSaveEntry[], hasChanges: boolean) => void;
+    onSaveImages?: () => void;
+    isSavingImages?: boolean;
+    disableSaveImages?: boolean;
 };
 
-const ImageSection = ({ remoteImageUrls }: ImageSectionProps) => {
+const ImageSection = ({
+    remoteImageUrls,
+    onLocalFilesChange,
+    onSaveEntriesChange,
+    onSaveImages,
+    isSavingImages = false,
+    disableSaveImages = false,
+}: ImageSectionProps) => {
     const useRemote = remoteImageUrls != null;
     const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() =>
         useRemote && remoteImageUrls.length > 0
@@ -88,6 +107,7 @@ const ImageSection = ({ remoteImageUrls }: ImageSectionProps) => {
     const replaceImageInputRef = useRef<HTMLInputElement | null>(null);
     const replaceTargetIdRef = useRef<number | null>(null);
     const galleryItemsRef = useRef(galleryItems);
+    const initialSignatureRef = useRef("");
     galleryItemsRef.current = galleryItems;
 
     const totalGalleryPages = Math.max(1, Math.ceil(galleryItems.length / GALLERY_PAGE_SIZE));
@@ -98,12 +118,23 @@ const ImageSection = ({ remoteImageUrls }: ImageSectionProps) => {
     const canPrevGallery = galleryPage > 0;
     const canNextGallery = galleryPage < totalGalleryPages - 1;
 
+    const buildItemSignature = (items: GalleryItem[]) =>
+        items
+            .map((item) => {
+                if (item.source === "remote") return `remote:${item.src}`;
+                const file = item.file;
+                if (!file) return `local:${item.src}`;
+                return `local:${file.name}:${file.size}:${file.lastModified}`;
+            })
+            .join("|");
+
     useEffect(() => {
         if (remoteImageUrls == null) return;
         const items = urlsToGalleryItems(remoteImageUrls);
         setGalleryItems(items);
         setGalleryPage(0);
         nextIdRef.current = items.length + 1;
+        initialSignatureRef.current = buildItemSignature(items);
     }, [remoteImageUrls]);
 
     useEffect(() => {
@@ -120,6 +151,30 @@ const ImageSection = ({ remoteImageUrls }: ImageSectionProps) => {
         };
     }, []);
 
+    useEffect(() => {
+        if (!onLocalFilesChange) return;
+        onLocalFilesChange(
+            galleryItems
+                .filter((item) => item.source === "local" && item.file)
+                .map((item) => item.file as File)
+        );
+    }, [galleryItems, onLocalFilesChange]);
+
+    useEffect(() => {
+        if (!onSaveEntriesChange) return;
+        const entries: ImageSaveEntry[] = galleryItems
+            .map((item) =>
+                item.source === "remote"
+                    ? ({ kind: "remote", src: item.src } as const)
+                    : item.file
+                      ? ({ kind: "local", file: item.file } as const)
+                      : null
+            )
+            .filter((item): item is ImageSaveEntry => item != null);
+        const hasChanges = buildItemSignature(galleryItems) !== initialSignatureRef.current;
+        onSaveEntriesChange(entries, hasChanges);
+    }, [galleryItems, onSaveEntriesChange]);
+
     const appendPhotosFromFiles = (files: FileList | null) => {
         if (!files?.length) return;
         const fileArr = Array.from(files);
@@ -128,6 +183,8 @@ const ImageSection = ({ remoteImageUrls }: ImageSectionProps) => {
             const added = fileArr.map((file) => ({
                 id: nextIdRef.current++,
                 src: URL.createObjectURL(file),
+                file,
+                source: "local" as const,
             }));
             const next = [...prev, ...added];
             lastPageAfterAdd = Math.max(0, Math.ceil(next.length / GALLERY_PAGE_SIZE) - 1);
@@ -144,7 +201,7 @@ const ImageSection = ({ remoteImageUrls }: ImageSectionProps) => {
             prev.map((item) => {
                 if (item.id !== id) return item;
                 if (isBlobUrl(item.src)) URL.revokeObjectURL(item.src);
-                return { ...item, src: url };
+                return { ...item, src: url, file, source: "local" as const };
             })
         );
     };
@@ -250,6 +307,16 @@ const ImageSection = ({ remoteImageUrls }: ImageSectionProps) => {
                         >
                             <TrashIcon width={15} height={15} fill="#222222" />
                             <span className="text-[12px] font-[SemiBold] text-[#222222]">Delete all</span>
+                        </button>
+                    </div>
+                    <div className="flex justify-end px-[16px] pb-[16px] md:px-[30px] md:pb-[24px]">
+                        <button
+                            type="button"
+                            onClick={onSaveImages}
+                            disabled={isSavingImages || disableSaveImages}
+                            className="h-[38px] rounded-[10px] bg-[#0832AE] px-[14px] text-[12px] font-[SemiBold] text-white disabled:opacity-60"
+                        >
+                            {isSavingImages ? "Saving images..." : "Save Images"}
                         </button>
                     </div>
                 </div>

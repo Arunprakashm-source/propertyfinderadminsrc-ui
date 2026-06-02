@@ -98,6 +98,25 @@ export const propertiesService = {
       { auth: true, signal }
     );
   },
+  updateProperty(id: string, payload: Record<string, unknown>, signal?: AbortSignal) {
+    return apiClient.put<PropertyDetailResponse>(
+      `/properties/${encodeURIComponent(id)}`,
+      payload,
+      { auth: true, signal }
+    );
+  },
+  uploadPropertyMedia(formData: FormData, signal?: AbortSignal) {
+    return apiClient.post<{
+      uploads?: {
+        images?: Array<{ filename?: string; url?: string; path?: string }>;
+        videos?: Array<{ filename?: string; url?: string; path?: string }>;
+      };
+      propertyUrl?: { img?: string; vid?: string };
+    }>("/properties/upload-media", formData, {
+      auth: true,
+      signal,
+    });
+  },
   async listAmenities(signal?: AbortSignal): Promise<AmenityMasterItem[]> {
     const data = await apiClient.get<MasterDataAmenitiesResponse>(
       "/master-data?types=amenities",

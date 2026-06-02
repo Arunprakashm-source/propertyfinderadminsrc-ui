@@ -4,12 +4,13 @@ import { DownArrowIcon } from "../../../assets/icons";
 import Header from "../../../components/Header/Header";
 import Loader from "../../../components/Loader/loader";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import ImageSection from "./propertycomponents/ImageSection";
+import ImageSection, { type ImageSaveEntry } from "./propertycomponents/ImageSection";
 import OtherDetails from "./propertycomponents/OtherDetails";
 import PropertyAmenitiesSection from "./propertycomponents/PropertyAmenitiesSection";
 import PropertyLocation from "./propertycomponents/PropertyLocation";
 import PropertyMediaSection from "./propertycomponents/PropertyMediaSection";
 import { propertiesService } from "../../../services/propertiesService";
+import { useToast } from "../../../context/ToastContext";
 import type {
     AmenityMasterItem,
     ListingTypeMasterItem,
@@ -25,6 +26,7 @@ const COMPLETION_STATUS_OPTIONS = [
 
 function ListingPropertyDetail() {
     const navigate = useNavigate();
+    const { push } = useToast();
     const [searchParams] = useSearchParams();
     const propertyId = searchParams.get("id")?.trim() || "";
 
@@ -35,6 +37,14 @@ function ListingPropertyDetail() {
     const [remoteImageUrls, setRemoteImageUrls] = useState<string[]>([]);
     const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
     const [virtualTour360, setVirtualTour360] = useState("");
+    const [uploadedImageFiles, setUploadedImageFiles] = useState<File[]>([]);
+    const [imageSaveEntries, setImageSaveEntries] = useState<ImageSaveEntry[]>([]);
+    const [isImageGalleryDirty, setIsImageGalleryDirty] = useState(false);
+    const [selectedVideoFile, setSelectedVideoFile] = useState<File | null>(null);
+    const [isVideoMarkedForRemoval, setIsVideoMarkedForRemoval] = useState(false);
+    const [initialVirtualTour360, setInitialVirtualTour360] = useState("");
+    const [isSavingImages, setIsSavingImages] = useState(false);
+    const [isSavingMedia, setIsSavingMedia] = useState(false);
     const [title, setTitle] = useState("");
     const [bedrooms, setBedrooms] = useState("");
     const [bathrooms, setBathrooms] = useState("");
@@ -89,6 +99,17 @@ function ListingPropertyDetail() {
     const [hasHydratedDescription, setHasHydratedDescription] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
+    const extractFilename = useCallback((value?: string | null) => {
+        if (!value) return "";
+        const trimmed = String(value).trim();
+        if (!trimmed) return "";
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            const [withoutQuery] = trimmed.split("?");
+            return withoutQuery.split("/").pop() || "";
+        }
+        return trimmed.includes("/") ? trimmed.split("/").pop() || "" : trimmed;
+    }, []);
+
     const selectedListingTypeLabel =
         listingTypeOptions.find((item) => item._id === selectedListingTypeId)?.name?.trim() ||
         "Select listing type";
@@ -117,9 +138,20 @@ function ListingPropertyDetail() {
 
     const handleVideoFileSelected = useCallback((file: File | null) => {
         if (!file) return;
+        setSelectedVideoFile(file);
+        setIsVideoMarkedForRemoval(false);
         setVideoPreviewUrl((prev) => {
             if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
             return URL.createObjectURL(file);
+        });
+    }, []);
+
+    const handleRemoveVideo = useCallback(() => {
+        setSelectedVideoFile(null);
+        setIsVideoMarkedForRemoval(true);
+        setVideoPreviewUrl((prev) => {
+            if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+            return null;
         });
     }, []);
 
@@ -127,11 +159,243 @@ function ListingPropertyDetail() {
         navigate(-1);
     }, [navigate]);
 
-    const handleSave = useCallback(() => {
-        // Keep action UX in place; PUT wiring will be attached to this handler.
+    const handleSave = useCallback(async () => {
+        if (!propertyId || isSaving) return;
         setIsSaving(true);
-        setTimeout(() => setIsSaving(false), 500);
-    }, []);
+        try {
+            const toOptionalNumber = (raw: string) => {
+                const cleaned = String(raw ?? "")
+                    .trim()
+                    .replace(/[^0-9.-]/g, "");
+                if (!cleaned || cleaned === "-" || cleaned === "." || cleaned === "-.") {
+                    return undefined;
+                }
+                const parsed = Number(cleaned);
+                return Number.isFinite(parsed) ? parsed : undefined;
+            };
+
+            const payload: Record<string, unknown> = {
+                title: title.trim(),
+                description,
+                listingType: selectedListingTypeId || undefined,
+                propertyType: selectedPropertyTypeId || undefined,
+                completionStatus: selectedCompletionStatus,
+                furnishedStatus: selectedFurnishedStatus || undefined,
+                bedrooms: toOptionalNumber(bedrooms),
+                bathrooms: toOptionalNumber(bathrooms),
+                maidBedroom: maidRoomAvailable,
+                areaSqm: toOptionalNumber(areaSqm),
+                areaSqft: toOptionalNumber(areaSqft),
+                price: toOptionalNumber(price),
+                currency: selectedCurrency || "AED",
+                maintenanceFees: toOptionalNumber(maintenanceFees),
+                serviceCharges: toOptionalNumber(serviceCharges),
+                dldPermitNumber: dldPermitNumber.trim(),
+                dldPermitUrl: dldPermitUrl.trim(),
+                isActive: isPropertyActive,
+                isFeatured,
+                isVerified,
+                isPetFriendly,
+                amenities: selectedAmenityIds,
+                location: {
+                    fullAddress: fullAddress.trim(),
+                    city: city.trim(),
+                    zone: zone.trim(),
+                    building: building.trim(),
+                },
+            };
+
+            if (isRentListing) {
+                payload.monthlyRentalPrice = toOptionalNumber(monthlyRent);
+            }
+
+            await propertiesService.updateProperty(propertyId, payload);
+            push({
+                type: "success",
+                title: "Property updated",
+                description: "Property details were saved successfully.",
+            });
+            navigate("/listingproperty");
+        } catch (error) {
+            push({
+                type: "error",
+                title: "Save failed",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to update property details.",
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    }, [
+        propertyId,
+        isSaving,
+        title,
+        description,
+        selectedListingTypeId,
+        selectedPropertyTypeId,
+        selectedCompletionStatus,
+        selectedFurnishedStatus,
+        bedrooms,
+        bathrooms,
+        maidRoomAvailable,
+        areaSqm,
+        areaSqft,
+        price,
+        selectedCurrency,
+        maintenanceFees,
+        serviceCharges,
+        dldPermitNumber,
+        dldPermitUrl,
+        isPropertyActive,
+        isFeatured,
+        isVerified,
+        isPetFriendly,
+        selectedAmenityIds,
+        fullAddress,
+        city,
+        zone,
+        building,
+        isRentListing,
+        monthlyRent,
+        push,
+        navigate,
+    ]);
+
+    const handleSaveImages = useCallback(async () => {
+        if (!propertyId || !isImageGalleryDirty || isSavingImages) return;
+        setIsSavingImages(true);
+        try {
+            const localFiles = imageSaveEntries
+                .filter((entry): entry is Extract<ImageSaveEntry, { kind: "local" }> => entry.kind === "local")
+                .map((entry) => entry.file);
+
+            let uploadRes:
+                | Awaited<ReturnType<typeof propertiesService.uploadPropertyMedia>>
+                | undefined;
+            let uploadedNames: string[] = [];
+
+            if (localFiles.length) {
+                const formData = new FormData();
+                localFiles.forEach((file) => formData.append("images", file));
+                uploadRes = await propertiesService.uploadPropertyMedia(formData);
+                uploadedNames = (uploadRes.uploads?.images ?? [])
+                    .map((row) => extractFilename(row.filename || row.url || row.path))
+                    .filter(Boolean);
+            }
+
+            const imageBase = uploadRes?.propertyUrl?.img || "http://localhost:5000/uploads/img/property/";
+            let uploadedIndex = 0;
+            const nextNames: string[] = [];
+            const nextUrls: string[] = [];
+
+            imageSaveEntries.forEach((entry) => {
+                if (entry.kind === "remote") {
+                    const name = extractFilename(entry.src);
+                    if (!name) return;
+                    nextNames.push(name);
+                    nextUrls.push(entry.src);
+                    return;
+                }
+                const name = uploadedNames[uploadedIndex++];
+                if (!name) return;
+                nextNames.push(name);
+                nextUrls.push(`${imageBase.replace(/\/?$/, "/")}${name}`);
+            });
+
+            await propertiesService.updateProperty(propertyId, { images: nextNames });
+            setRemoteImageUrls(nextUrls);
+            setUploadedImageFiles([]);
+            setIsImageGalleryDirty(false);
+            push({
+                type: "success",
+                title: "Images updated",
+                description: "Property images have been saved successfully.",
+            });
+        } catch (error) {
+            push({
+                type: "error",
+                title: "Failed to save images",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Unable to update property images. Please try again.",
+            });
+        } finally {
+            setIsSavingImages(false);
+        }
+    }, [propertyId, isImageGalleryDirty, isSavingImages, imageSaveEntries, extractFilename, push]);
+
+    const handleSaveMedia = useCallback(async () => {
+        if (!propertyId || isSavingMedia) return;
+        const hasTourChanged = virtualTour360.trim() !== initialVirtualTour360.trim();
+        if (!selectedVideoFile && !isVideoMarkedForRemoval && !hasTourChanged) return;
+        setIsSavingMedia(true);
+        try {
+            let nextVideoName: string | undefined;
+            let nextVideoUrl: string | null | undefined;
+            if (selectedVideoFile) {
+                const formData = new FormData();
+                formData.append("video", selectedVideoFile);
+                const uploadRes = await propertiesService.uploadPropertyMedia(formData);
+                const uploaded = uploadRes.uploads?.videos?.[0];
+                nextVideoName = extractFilename(uploaded?.filename || uploaded?.url || uploaded?.path);
+                if (nextVideoName) {
+                    const videoBase =
+                        uploadRes.propertyUrl?.vid ||
+                        "http://localhost:5000/uploads/vid/property/";
+                    nextVideoUrl = `${videoBase.replace(/\/?$/, "/")}${nextVideoName}`;
+                }
+            }
+            const payload: Record<string, unknown> = { virtualTour360: virtualTour360.trim() };
+            if (isVideoMarkedForRemoval) payload.videoTour = "";
+            if (selectedVideoFile) payload.videoTour = nextVideoName || "";
+            await propertiesService.updateProperty(propertyId, payload);
+            if (nextVideoUrl !== undefined) {
+                setVideoPreviewUrl(nextVideoUrl ?? null);
+                setSelectedVideoFile(null);
+            }
+            if (isVideoMarkedForRemoval) {
+                setVideoPreviewUrl(null);
+            }
+            setIsVideoMarkedForRemoval(false);
+            setInitialVirtualTour360(virtualTour360.trim());
+            push({
+                type: "success",
+                title: "Media updated",
+                description: "Video and 360 tour details have been saved successfully.",
+            });
+        } catch (error) {
+            push({
+                type: "error",
+                title: "Failed to save media",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Unable to update media details. Please try again.",
+            });
+        } finally {
+            setIsSavingMedia(false);
+        }
+    }, [
+        propertyId,
+        isSavingMedia,
+        virtualTour360,
+        initialVirtualTour360,
+        selectedVideoFile,
+        isVideoMarkedForRemoval,
+        extractFilename,
+        push,
+    ]);
+
+    const handleImageSaveEntriesChange = useCallback(
+        (entries: ImageSaveEntry[], hasChanges: boolean) => {
+            setImageSaveEntries(entries);
+            setIsImageGalleryDirty(hasChanges);
+        },
+        []
+    );
 
     useEffect(() => {
         let mounted = true;
@@ -243,6 +507,10 @@ function ListingPropertyDetail() {
                     (property.amenities ?? []).map((a) => String(a._id))
                 );
                 setVirtualTour360(property.virtualTour360 ?? "");
+                setInitialVirtualTour360(property.virtualTour360 ?? "");
+                setUploadedImageFiles([]);
+                setSelectedVideoFile(null);
+                setIsVideoMarkedForRemoval(false);
                 const resolvedImages = (property.images ?? [])
                     .map((img) => {
                         const url = img?.url?.trim();
@@ -434,7 +702,7 @@ function ListingPropertyDetail() {
                     onBackClick={() => navigate(-1)}
                 />
                 <div className="mt-[40px] flex justify-center">
-                    <Loader size={100} />
+                    <Loader size={80} margin="0" />
                 </div>
             </div>
         );
@@ -1051,9 +1319,19 @@ function ListingPropertyDetail() {
                         virtualTour360={virtualTour360}
                         onVirtualTour360Change={setVirtualTour360}
                         onVideoFileSelected={handleVideoFileSelected}
+                        onRemoveVideo={handleRemoveVideo}
+                        onSaveMedia={handleSaveMedia}
+                        isSavingMedia={isSavingMedia}
                     />
 
-                    <ImageSection remoteImageUrls={remoteImageUrls} />
+                    <ImageSection
+                        remoteImageUrls={remoteImageUrls}
+                        onLocalFilesChange={setUploadedImageFiles}
+                        onSaveEntriesChange={handleImageSaveEntriesChange}
+                        onSaveImages={handleSaveImages}
+                        isSavingImages={isSavingImages}
+                        disableSaveImages={!isImageGalleryDirty}
+                    />
 
                     <OtherDetails
                         dldPermitNumber={dldPermitNumber}
@@ -1079,24 +1357,25 @@ function ListingPropertyDetail() {
                     />
                 </div>
             </div>
-            <div className="sticky bottom-0 z-20 mt-[16px]">
-                <div className="flex items-center justify-end gap-[10px] rounded-[12px] border border-[#EAEAEA] bg-white px-[16px] py-[12px] shadow-[0_-2px_16px_rgba(17,17,26,0.08)]">
+            <div className="mt-[24px] flex items-center justify-end gap-[12px]">
                     <button
                         type="button"
                         onClick={handleCancel}
-                        className="h-[40px] min-w-[100px] rounded-[10px] border border-[#D0D5DD] px-[16px] text-[13px] font-[SemiBold] text-[#222]"
+                        className="h-[42px] px-[20px] rounded-[10px] border border-[rgba(34,34,34,0.10)] text-[#222] text-[14px] font-[Medium] hover:bg-[#F5F5F5] transition-all"
                     >
                         Cancel
                     </button>
                     <button
                         type="button"
                         onClick={handleSave}
-                        disabled={isSaving}
-                        className="h-[40px] min-w-[100px] rounded-[10px] bg-[#0832AE] px-[16px] text-[13px] font-[SemiBold] text-white disabled:opacity-60"
+                        disabled={isSaving || pageLoading}
+                        className={`h-[42px] px-[24px] rounded-[10px] text-[#fff] text-[14px] font-[SemiBold] transition-all ${isSaving || pageLoading
+                                ? "bg-[#6A3CA899] cursor-not-allowed"
+                                : "bg-[#6A3CA8] hover:opacity-90"
+                            }`}
                     >
                         {isSaving ? "Saving..." : "Save"}
                     </button>
-                </div>
             </div>
             <input
                 ref={imageInputRef}

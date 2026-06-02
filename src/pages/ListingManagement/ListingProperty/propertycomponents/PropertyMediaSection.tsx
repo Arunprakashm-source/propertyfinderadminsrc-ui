@@ -6,6 +6,9 @@ type PropertyMediaSectionProps = {
   virtualTour360: string;
   onVirtualTour360Change: (value: string) => void;
   onVideoFileSelected?: (file: File | null) => void;
+  onRemoveVideo?: () => void;
+  onSaveMedia?: () => void;
+  isSavingMedia?: boolean;
 };
 
 const PropertyMediaSection = ({
@@ -13,6 +16,9 @@ const PropertyMediaSection = ({
   virtualTour360,
   onVirtualTour360Change,
   onVideoFileSelected,
+  onRemoveVideo,
+  onSaveMedia,
+  isSavingMedia = false,
 }: PropertyMediaSectionProps) => {
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -70,6 +76,16 @@ const PropertyMediaSection = ({
               >
                 Replace video
               </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveVideo?.();
+                }}
+                className="mt-[10px] h-[34px] px-[16px] rounded-[10px] border border-[#222] text-[#222] text-[12px] font-[SemiBold]"
+              >
+                Remove video
+              </button>
             </div>
           )}
         </div>
@@ -103,6 +119,17 @@ const PropertyMediaSection = ({
         <GalleryIcon width={16} height={16} />
         Property images are managed in the gallery section below.
       </p>
+
+      <div className="flex justify-end -mt-[10px]">
+        <button
+          type="button"
+          onClick={onSaveMedia}
+          disabled={isSavingMedia}
+          className="h-[38px] rounded-[10px] bg-[#0832AE] px-[14px] text-[12px] font-[SemiBold] text-white disabled:opacity-60"
+        >
+          {isSavingMedia ? "Saving media..." : "Save Video / 360"}
+        </button>
+      </div>
     </div>
   );
 };
