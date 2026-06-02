@@ -64,10 +64,26 @@ const maxInitialId = galleryImagess.reduce((m, r) => Math.max(m, r.id), 0);
 
 const isBlobUrl = (src: string) => src.startsWith("blob:");
 
-const ImageSection = () => {
-    const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(initialGalleryItems);
+const urlsToGalleryItems = (urls: string[]): GalleryItem[] =>
+    urls.map((src, index) => ({ id: index + 1, src }));
+
+type ImageSectionProps = {
+    remoteImageUrls?: string[];
+};
+
+const ImageSection = ({ remoteImageUrls }: ImageSectionProps) => {
+    const useRemote = remoteImageUrls != null;
+    const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(() =>
+        useRemote && remoteImageUrls.length > 0
+            ? urlsToGalleryItems(remoteImageUrls)
+            : useRemote
+              ? []
+              : initialGalleryItems
+    );
     const [galleryPage, setGalleryPage] = useState(0);
-    const nextIdRef = useRef(maxInitialId + 1);
+    const nextIdRef = useRef(
+        useRemote ? Math.max(remoteImageUrls.length, 0) + 1 : maxInitialId + 1
+    );
     const addPhotosInputRef = useRef<HTMLInputElement | null>(null);
     const replaceImageInputRef = useRef<HTMLInputElement | null>(null);
     const replaceTargetIdRef = useRef<number | null>(null);
@@ -81,6 +97,14 @@ const ImageSection = () => {
     );
     const canPrevGallery = galleryPage > 0;
     const canNextGallery = galleryPage < totalGalleryPages - 1;
+
+    useEffect(() => {
+        if (remoteImageUrls == null) return;
+        const items = urlsToGalleryItems(remoteImageUrls);
+        setGalleryItems(items);
+        setGalleryPage(0);
+        nextIdRef.current = items.length + 1;
+    }, [remoteImageUrls]);
 
     useEffect(() => {
         if (galleryPage > totalGalleryPages - 1) {

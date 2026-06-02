@@ -635,6 +635,83 @@ export type MasterDataPropertyClassificationResponse = {
   furnishedstatus?: NamedValueMasterItem[];
 };
 
+export type AmenityMasterItem = {
+  _id: string;
+  name?: string;
+  slug?: string;
+  category?: string;
+  icon?: string;
+  image?: string;
+  displayOrder?: number;
+  isActive?: boolean;
+};
+
+export type MasterDataAmenitiesResponse = {
+  amenities?: AmenityMasterItem[];
+};
+
+export type AdminPropertyAmenity = {
+  _id: string;
+  name?: string;
+  slug?: string;
+  category?: string;
+  icon?: string;
+  image?: string;
+};
+
+export type AdminPropertyDetail = {
+  _id: string;
+  title?: string;
+  description?: string;
+  slug?: string;
+  listingType?: ListingTypeMasterItem;
+  propertyType?: PropertyTypeMasterItem;
+  bedrooms?: number;
+  maidBedroom?: boolean;
+  bathrooms?: number;
+  area?: { sqm?: number; sqft?: number };
+  amenities?: AdminPropertyAmenity[];
+  price?: number;
+  maintenanceFees?: number;
+  serviceCharges?: number;
+  currency?: string;
+  images?: AdminPropertyImage[];
+  virtualTour360?: string;
+  videoTour?: string;
+  floorPlan?: string[];
+  location?: {
+    fullAddress?: string;
+    city?: string;
+    zone?: string;
+    building?: string;
+    googlePlaceId?: string;
+  };
+  dldPermitNumber?: string;
+  dldPermitUrl?: string;
+  isActive?: boolean;
+  status?: string;
+  completionStatus?: string;
+  furnishedStatus?: string;
+  isPetFriendly?: boolean;
+  isFeatured?: boolean;
+  isVerified?: boolean;
+  agent?: AdminPropertyProfileRef | null;
+  agency?: AdminPropertyProfileRef | null;
+  developer?: {
+    _id?: string;
+    name?: string;
+    email?: string;
+    profilePicture?: string;
+  } | null;
+  rentPricing?: { yearly?: number; monthly?: number } | null;
+  publishedAt?: string;
+  createdAt?: string;
+};
+
+export type PropertyDetailResponse = {
+  property: AdminPropertyDetail;
+};
+
 export type ListPropertiesParams = {
   page?: number;
   limit?: number;

@@ -1,12 +1,15 @@
 import { apiClient } from "./apiClient";
 import type {
+  AmenityMasterItem,
   ListPropertiesParams,
   ListingTypeMasterItem,
+  MasterDataAmenitiesResponse,
   MasterDataListingTypesResponse,
   MasterDataPropertyClassificationResponse,
   MasterDataPropertyLocationsResponse,
   NamedValueMasterItem,
   PropertiesListResponse,
+  PropertyDetailResponse,
   PropertyLocationOption,
   PropertyTypeMasterItem,
   SupportedUrlsResponse,
@@ -88,5 +91,25 @@ export const propertiesService = {
     );
 
     return { listingTypes, propertyTypes, furnishedStatus };
+  },
+  getPropertyById(id: string, signal?: AbortSignal) {
+    return apiClient.get<PropertyDetailResponse>(
+      `/properties/${encodeURIComponent(id)}`,
+      { auth: true, signal }
+    );
+  },
+  async listAmenities(signal?: AbortSignal): Promise<AmenityMasterItem[]> {
+    const data = await apiClient.get<MasterDataAmenitiesResponse>(
+      "/master-data?types=amenities",
+      { auth: true, signal }
+    );
+    return (data.amenities ?? [])
+      .filter((item) => item?._id)
+      .sort((a, b) => {
+        const ao = Number(a.displayOrder ?? 999);
+        const bo = Number(b.displayOrder ?? 999);
+        if (ao !== bo) return ao - bo;
+        return String(a.name ?? "").localeCompare(String(b.name ?? ""));
+      });
   },
 };

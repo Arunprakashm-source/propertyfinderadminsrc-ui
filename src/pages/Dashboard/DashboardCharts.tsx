@@ -24,6 +24,7 @@ const baseChartOptions: ApexOptions = {
     chart: {
         toolbar: { show: false },
         fontFamily: "inherit",
+        animations: { enabled: false },
     },
     grid: {
         borderColor: "rgba(34,34,34,0.08)",

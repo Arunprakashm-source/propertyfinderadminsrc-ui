@@ -1,15 +1,17 @@
-import profileimg from "../../../assets/img/profileless.png";
-import type { Country } from "../../../data/countries";
-import { countries } from "../../../data/countries";
-import React, { useRef, useState, useEffect } from "react";
-import { DownArrowIcon, SearchIcon, VerifiedIcon, } from "../../../assets/icons";
+import React, { useRef, useState, useEffect, useCallback } from "react";
+import Quill from "quill";
+import { DownArrowIcon } from "../../../assets/icons";
 import Header from "../../../components/Header/Header";
-import { useNavigate } from "react-router-dom";
+import Loader from "../../../components/Loader/loader";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import ImageSection from "./propertycomponents/ImageSection";
 import OtherDetails from "./propertycomponents/OtherDetails";
+import PropertyAmenitiesSection from "./propertycomponents/PropertyAmenitiesSection";
 import PropertyLocation from "./propertycomponents/PropertyLocation";
+import PropertyMediaSection from "./propertycomponents/PropertyMediaSection";
 import { propertiesService } from "../../../services/propertiesService";
 import type {
+    AmenityMasterItem,
     ListingTypeMasterItem,
     NamedValueMasterItem,
     PropertyTypeMasterItem,
@@ -23,6 +25,32 @@ const COMPLETION_STATUS_OPTIONS = [
 
 function ListingPropertyDetail() {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const propertyId = searchParams.get("id")?.trim() || "";
+
+    const [pageLoading, setPageLoading] = useState(Boolean(propertyId));
+    const [pageError, setPageError] = useState<string | null>(null);
+    const [amenityOptions, setAmenityOptions] = useState<AmenityMasterItem[]>([]);
+    const [selectedAmenityIds, setSelectedAmenityIds] = useState<string[]>([]);
+    const [remoteImageUrls, setRemoteImageUrls] = useState<string[]>([]);
+    const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+    const [virtualTour360, setVirtualTour360] = useState("");
+    const [title, setTitle] = useState("");
+    const [bedrooms, setBedrooms] = useState("");
+    const [bathrooms, setBathrooms] = useState("");
+    const [areaSqm, setAreaSqm] = useState("");
+    const [areaSqft, setAreaSqft] = useState("");
+    const [price, setPrice] = useState("");
+    const [maintenanceFees, setMaintenanceFees] = useState("");
+    const [serviceCharges, setServiceCharges] = useState("");
+    const [dldPermitNumber, setDldPermitNumber] = useState("");
+    const [dldPermitUrl, setDldPermitUrl] = useState("");
+    const [monthlyRent, setMonthlyRent] = useState("");
+    const [fullAddress, setFullAddress] = useState("");
+    const [city, setCity] = useState("");
+    const [zone, setZone] = useState("");
+    const [building, setBuilding] = useState("");
+
     // Property Status Toggle States
     const [isPropertyActive, setIsPropertyActive] = useState(true);
     const [isFeatured, setIsFeatured] = useState(false);
@@ -58,6 +86,8 @@ function ListingPropertyDetail() {
     const imageInputRef = useRef<HTMLInputElement | null>(null);
     const [description, setDescription] = useState("");
     const [quill, setQuill] = useState<any>(null);
+    const [hasHydratedDescription, setHasHydratedDescription] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const selectedListingTypeLabel =
         listingTypeOptions.find((item) => item._id === selectedListingTypeId)?.name?.trim() ||
@@ -72,68 +102,210 @@ function ListingPropertyDetail() {
         COMPLETION_STATUS_OPTIONS.find((item) => item.value === selectedCompletionStatus)?.name ||
         "Select completion status";
 
+    const selectedListingType = listingTypeOptions.find(
+        (item) => item._id === selectedListingTypeId
+    );
+    const isRentListing = selectedListingType?.transaction === "rent";
+
+    const toggleAmenity = useCallback((amenityId: string) => {
+        setSelectedAmenityIds((prev) =>
+            prev.includes(amenityId)
+                ? prev.filter((id) => id !== amenityId)
+                : [...prev, amenityId]
+        );
+    }, []);
+
+    const handleVideoFileSelected = useCallback((file: File | null) => {
+        if (!file) return;
+        setVideoPreviewUrl((prev) => {
+            if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(file);
+        });
+    }, []);
+
+    const handleCancel = useCallback(() => {
+        navigate(-1);
+    }, [navigate]);
+
+    const handleSave = useCallback(() => {
+        // Keep action UX in place; PUT wiring will be attached to this handler.
+        setIsSaving(true);
+        setTimeout(() => setIsSaving(false), 500);
+    }, []);
+
     useEffect(() => {
         let mounted = true;
         const controller = new AbortController();
 
-        propertiesService
-            .getPropertyClassificationMasterData(controller.signal)
-            .then(({ listingTypes, propertyTypes, furnishedStatus }) => {
+        Promise.all([
+            propertiesService.getPropertyClassificationMasterData(controller.signal),
+            propertiesService.listAmenities(controller.signal),
+        ])
+            .then(([classification, amenities]) => {
                 if (!mounted) return;
+                const { listingTypes, propertyTypes, furnishedStatus } = classification;
                 setListingTypeOptions(listingTypes);
                 setPropertyTypeOptions(propertyTypes);
                 setFurnishedStatusOptions(furnishedStatus);
-                setSelectedListingTypeId((prev) => prev || listingTypes[0]?._id || "");
-                setSelectedPropertyTypeId((prev) => prev || propertyTypes[0]?._id || "");
-                setSelectedFurnishedStatus((prev) => prev || furnishedStatus[0]?.value || "");
+                setAmenityOptions(amenities);
+                if (!propertyId) {
+                    setSelectedListingTypeId((prev) => prev || listingTypes[0]?._id || "");
+                    setSelectedPropertyTypeId((prev) => prev || propertyTypes[0]?._id || "");
+                    setSelectedFurnishedStatus(
+                        (prev) => prev || furnishedStatus[0]?.value || ""
+                    );
+                }
             })
             .catch(() => {
                 if (!mounted) return;
                 setListingTypeOptions([]);
                 setPropertyTypeOptions([]);
                 setFurnishedStatusOptions([]);
+                setAmenityOptions([]);
             });
 
         return () => {
             mounted = false;
             controller.abort();
         };
-    }, []);
+    }, [propertyId]);
 
     useEffect(() => {
+        if (!propertyId) {
+            setPageLoading(false);
+            setPageError(null);
+            return;
+        }
+
         let mounted = true;
-        let instance: any = null;
+        const controller = new AbortController();
+        setPageLoading(true);
+        setPageError(null);
 
-        const initQuill = async () => {
-            if (!quillRef.current) return;
-            try {
-                const { default: Quill } = await import("quill");
-                if (!mounted || !quillRef.current) return;
+        Promise.all([
+            propertiesService.getPropertyById(propertyId, controller.signal),
+            propertiesService.getSupportedUrls(controller.signal),
+        ])
+            .then(([{ property }, supported]) => {
+                if (!mounted) return;
 
-                instance = new Quill(quillRef.current, {
-                    theme: "snow",
-                    modules: {
-                        toolbar: [
-                            [{ header: [1, 2, 3, false] }],
-                            ["bold", "italic", "underline"],
-                            [{ list: "ordered" }, { list: "bullet" }],
-                            ["link"],
-                            ["clean"],
-                        ],
-                    },
-                });
-                setQuill(instance);
-            } catch {
-                setQuill(null);
-            }
-        };
+                const imgBase = supported.supportedUrls?.propertyUrl?.img ?? "";
+                const vidBase = supported.supportedUrls?.propertyUrl?.vid ?? "";
 
-        void initQuill();
+                setTitle(property.title ?? "");
+                setDescription(property.description ?? "");
+                setHasHydratedDescription(false);
+                setSelectedListingTypeId(property.listingType?._id ?? "");
+                setSelectedPropertyTypeId(property.propertyType?._id ?? "");
+                setSelectedCompletionStatus(property.completionStatus ?? "ready");
+                setSelectedFurnishedStatus(property.furnishedStatus ?? "");
+                setBedrooms(
+                    property.bedrooms != null ? String(property.bedrooms) : ""
+                );
+                setBathrooms(
+                    property.bathrooms != null ? String(property.bathrooms) : ""
+                );
+                setMaidRoomAvailable(Boolean(property.maidBedroom));
+                setAreaSqm(
+                    property.area?.sqm != null ? String(property.area.sqm) : ""
+                );
+                setAreaSqft(
+                    property.area?.sqft != null ? String(property.area.sqft) : ""
+                );
+                setPrice(property.price != null ? String(property.price) : "");
+                setSelectedCurrency(property.currency ?? "AED");
+                setMaintenanceFees(
+                    property.maintenanceFees != null
+                        ? String(property.maintenanceFees)
+                        : ""
+                );
+                setServiceCharges(
+                    property.serviceCharges != null
+                        ? String(property.serviceCharges)
+                        : ""
+                );
+                setDldPermitNumber(property.dldPermitNumber ?? "");
+                setDldPermitUrl(property.dldPermitUrl ?? "");
+                setMonthlyRent(
+                    property.rentPricing?.monthly != null
+                        ? String(property.rentPricing.monthly)
+                        : ""
+                );
+                setFullAddress(property.location?.fullAddress ?? "");
+                setCity(property.location?.city ?? "");
+                setZone(property.location?.zone ?? "");
+                setBuilding(property.location?.building ?? "");
+                setIsPropertyActive(property.isActive !== false);
+                setIsFeatured(Boolean(property.isFeatured));
+                setIsVerified(property.isVerified !== false);
+                setIsPetFriendly(Boolean(property.isPetFriendly));
+                setSelectedAmenityIds(
+                    (property.amenities ?? []).map((a) => String(a._id))
+                );
+                setVirtualTour360(property.virtualTour360 ?? "");
+                const resolvedImages = (property.images ?? [])
+                    .map((img) => {
+                        const url = img?.url?.trim();
+                        if (!url) return "";
+                        if (/^https?:\/\//i.test(url)) return url;
+                        const base = (imgBase || "").replace(/\/$/, "");
+                        const path = url.replace(/^\//, "");
+                        return base ? `${base}/${path}` : url;
+                    })
+                    .filter(Boolean);
+                setRemoteImageUrls(resolvedImages);
+
+                const videoUrlRaw = property.videoTour?.trim() || "";
+                const videoUrl = (() => {
+                    if (!videoUrlRaw) return "";
+                    if (/^https?:\/\//i.test(videoUrlRaw)) return videoUrlRaw;
+                    const base = (vidBase || "").replace(/\/$/, "");
+                    const path = videoUrlRaw.replace(/^\//, "");
+                    return base ? `${base}/${path}` : videoUrlRaw;
+                })();
+                setVideoPreviewUrl(videoUrl || null);
+            })
+            .catch((err: unknown) => {
+                if (!mounted) return;
+                const message =
+                    err instanceof Error ? err.message : "Failed to load property";
+                setPageError(message);
+            })
+            .finally(() => {
+                if (mounted) setPageLoading(false);
+            });
 
         return () => {
             mounted = false;
+            controller.abort();
+        };
+    }, [propertyId]);
+
+    useEffect(() => {
+        if (pageLoading || pageError || quill || !quillRef.current) return;
+
+        try {
+            const instance = new Quill(quillRef.current, {
+                theme: "snow",
+                modules: {
+                    toolbar: [
+                        [{ header: [1, 2, 3, false] }],
+                        ["bold", "italic", "underline"],
+                        [{ list: "ordered" }, { list: "bullet" }],
+                        ["link"],
+                        ["clean"],
+                    ],
+                },
+            });
+            setQuill(instance);
+        } catch {
             setQuill(null);
-            instance = null;
+        }
+    }, [pageLoading, pageError, quill]);
+
+    useEffect(() => {
+        return () => {
+            setQuill(null);
         };
     }, []);
 
@@ -155,8 +327,10 @@ function ListingPropertyDetail() {
     useEffect(() => {
         if (!quill) return;
 
-        if (description && quill.root.innerHTML !== description) {
-            quill.root.innerHTML = description;
+        // Hydrate once from API so we don't overwrite user edits afterward.
+        if (!hasHydratedDescription && quill.root.innerHTML !== description) {
+            quill.clipboard?.dangerouslyPasteHTML?.(description || "");
+            setHasHydratedDescription(true);
         }
 
         const onTextChange = () => {
@@ -176,7 +350,7 @@ function ListingPropertyDetail() {
         return () => {
             quill.off("text-change", onTextChange);
         };
-    }, [quill, description]);
+    }, [quill, description, hasHydratedDescription]);
 
     useEffect(() => {
         const input = imageInputRef.current;
@@ -233,12 +407,67 @@ function ListingPropertyDetail() {
             document.removeEventListener("mousedown", handleClickOutside);
         };
     }, []);
+
+    if (!propertyId) {
+        return (
+            <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
+                <Header
+                    title="Listing Property Detail"
+                    showBack={true}
+                    onBackClick={() => navigate(-1)}
+                />
+                <div className="mt-[20px] rounded-[12px] border border-[#EAEAEA] bg-white p-[24px] text-center">
+                    <p className="text-[14px] text-[#707070]">
+                        Open a property from the listing table to view its details.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    if (pageLoading) {
+        return (
+            <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
+                <Header
+                    title="Listing Property Detail"
+                    showBack={true}
+                    onBackClick={() => navigate(-1)}
+                />
+                <div className="mt-[40px] flex justify-center">
+                    <Loader size={100} />
+                </div>
+            </div>
+        );
+    }
+
+    if (pageError) {
+        return (
+            <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
+                <Header
+                    title="Listing Property Detail"
+                    showBack={true}
+                    onBackClick={() => navigate(-1)}
+                />
+                <div className="mt-[20px] rounded-[12px] border border-[#EAEAEA] bg-white p-[24px] text-center">
+                    <p className="text-[14px] text-[#EA3934] mb-[12px]">{pageError}</p>
+                    <button
+                        type="button"
+                        onClick={() => navigate(-1)}
+                        className="text-[13px] font-[SemiBold] text-[#0832AE]"
+                    >
+                        Back to listings
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
 
             {/* Header */}
             <Header
-                title="Listing Property Detail"
+                title={"Listing Property Details"}
                 showBack={true}
                 onBackClick={() => navigate(-1)}
             />
@@ -267,6 +496,8 @@ function ListingPropertyDetail() {
                                 <input
                                     type="text"
                                     placeholder="Enter Property Title"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
                                     className="h-[44px] w-full rounded-[10px] border border-[#EAEAEA] px-[14px] text-[13px] focus:outline-none"
                                 />
                             </div>
@@ -503,6 +734,8 @@ function ListingPropertyDetail() {
                                 <input
                                     type="number"
                                     placeholder="2"
+                                    value={bedrooms}
+                                    onChange={(e) => setBedrooms(e.target.value)}
                                     className="h-[44px] w-full rounded-[10px] border border-[#EAEAEA] px-[14px] text-[13px] focus:outline-none"
                                 />
                                 <label className="mt-[8px] inline-flex items-center gap-[8px] cursor-pointer">
@@ -524,6 +757,8 @@ function ListingPropertyDetail() {
                                 <input
                                     type="number"
                                     placeholder="2"
+                                    value={bathrooms}
+                                    onChange={(e) => setBathrooms(e.target.value)}
                                     className="h-[44px] w-full rounded-[10px] border border-[#EAEAEA] px-[14px] text-[13px] focus:outline-none"
                                 />
                             </div>
@@ -536,6 +771,8 @@ function ListingPropertyDetail() {
                                 <input
                                     type="number"
                                     placeholder="1500"
+                                    value={areaSqm}
+                                    onChange={(e) => setAreaSqm(e.target.value)}
                                     className="h-[44px] w-full rounded-[10px] border border-[#EAEAEA] px-[14px] text-[13px] focus:outline-none"
                                 />
                             </div>
@@ -548,12 +785,20 @@ function ListingPropertyDetail() {
                                 <input
                                     type="number"
                                     placeholder="1800"
+                                    value={areaSqft}
+                                    onChange={(e) => setAreaSqft(e.target.value)}
                                     className="h-[44px] w-full rounded-[10px] border border-[#EAEAEA] px-[14px] text-[13px] focus:outline-none"
                                 />
                             </div>
 
                         </div>
                     </div>
+
+                    <PropertyAmenitiesSection
+                        amenities={amenityOptions}
+                        selectedAmenityIds={selectedAmenityIds}
+                        onToggleAmenity={toggleAmenity}
+                    />
 
                     {/* ================= Pricing ================= */}
                     <div className="bg-white rounded-[12px] p-[20px] border border-[#EAEAEA]">
@@ -571,6 +816,8 @@ function ListingPropertyDetail() {
                                 <input
                                     type="number"
                                     placeholder="250000"
+                                    value={price}
+                                    onChange={(e) => setPrice(e.target.value)}
                                     className="h-[44px] w-full rounded-[10px] border border-[#EAEAEA] px-[14px] text-[13px] focus:outline-none"
                                 />
                             </div>
@@ -623,7 +870,9 @@ function ListingPropertyDetail() {
 
                                 <input
                                     type="number"
-                                    placeholder="500"
+                                    placeholder="Enter Maintenance Fees"
+                                    value={maintenanceFees}
+                                    onChange={(e) => setMaintenanceFees(e.target.value)}
                                     className="h-[44px] w-full rounded-[10px] border border-[#EAEAEA] px-[14px] text-[13px] focus:outline-none"
                                 />
                             </div>
@@ -635,7 +884,9 @@ function ListingPropertyDetail() {
 
                                 <input
                                     type="number"
-                                    placeholder="200"
+                                    placeholder="Enter Service Charges"
+                                    value={serviceCharges}
+                                    onChange={(e) => setServiceCharges(e.target.value)}
                                     className="h-[44px] w-full rounded-[10px] border border-[#EAEAEA] px-[14px] text-[13px] focus:outline-none"
                                 />
                             </div>
@@ -744,6 +995,8 @@ function ListingPropertyDetail() {
 
                                 <textarea
                                     placeholder="Enter Full Address"
+                                    value={fullAddress}
+                                    onChange={(e) => setFullAddress(e.target.value)}
                                     className="w-full h-[120px] rounded-[10px] border border-[#EAEAEA] px-[14px] py-[12px] text-[13px] resize-none focus:outline-none"
                                 />
                             </div>
@@ -756,6 +1009,8 @@ function ListingPropertyDetail() {
                                 <input
                                     type="text"
                                     placeholder="Dubai"
+                                    value={city}
+                                    onChange={(e) => setCity(e.target.value)}
                                     className="h-[44px] w-full rounded-[10px] border border-[#EAEAEA] px-[14px] text-[13px] focus:outline-none"
                                 />
                             </div>
@@ -768,6 +1023,8 @@ function ListingPropertyDetail() {
                                 <input
                                     type="text"
                                     placeholder="Business Bay"
+                                    value={zone}
+                                    onChange={(e) => setZone(e.target.value)}
                                     className="h-[44px] w-full rounded-[10px] border border-[#EAEAEA] px-[14px] text-[13px] focus:outline-none"
                                 />
                             </div>
@@ -780,6 +1037,8 @@ function ListingPropertyDetail() {
                                 <input
                                     type="text"
                                     placeholder="Tower A"
+                                    value={building}
+                                    onChange={(e) => setBuilding(e.target.value)}
                                     className="h-[44px] w-full rounded-[10px] border border-[#EAEAEA] px-[14px] text-[13px] focus:outline-none"
                                 />
                             </div>
@@ -787,10 +1046,56 @@ function ListingPropertyDetail() {
                         </div>
                     </div>
 
+                    <PropertyMediaSection
+                        videoPreviewUrl={videoPreviewUrl}
+                        virtualTour360={virtualTour360}
+                        onVirtualTour360Change={setVirtualTour360}
+                        onVideoFileSelected={handleVideoFileSelected}
+                    />
 
-                    <ImageSection />
-                    <OtherDetails />
-                    <PropertyLocation />
+                    <ImageSection remoteImageUrls={remoteImageUrls} />
+
+                    <OtherDetails
+                        dldPermitNumber={dldPermitNumber}
+                        dldPermitUrl={dldPermitUrl}
+                        onDldPermitNumberChange={setDldPermitNumber}
+                        onDldPermitUrlChange={setDldPermitUrl}
+                        showMonthlyRent={isRentListing}
+                        monthlyRent={monthlyRent}
+                        onMonthlyRentChange={setMonthlyRent}
+                        maintenanceFees={maintenanceFees}
+                        onMaintenanceFeesChange={setMaintenanceFees}
+                        serviceCharges={serviceCharges}
+                        onServiceChargesChange={setServiceCharges}
+                    />
+
+                    <PropertyLocation
+                        zone={zone}
+                        city={city}
+                        fullAddress={fullAddress}
+                        onZoneChange={setZone}
+                        onCityChange={setCity}
+                        onFullAddressChange={setFullAddress}
+                    />
+                </div>
+            </div>
+            <div className="sticky bottom-0 z-20 mt-[16px]">
+                <div className="flex items-center justify-end gap-[10px] rounded-[12px] border border-[#EAEAEA] bg-white px-[16px] py-[12px] shadow-[0_-2px_16px_rgba(17,17,26,0.08)]">
+                    <button
+                        type="button"
+                        onClick={handleCancel}
+                        className="h-[40px] min-w-[100px] rounded-[10px] border border-[#D0D5DD] px-[16px] text-[13px] font-[SemiBold] text-[#222]"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="h-[40px] min-w-[100px] rounded-[10px] bg-[#0832AE] px-[16px] text-[13px] font-[SemiBold] text-white disabled:opacity-60"
+                    >
+                        {isSaving ? "Saving..." : "Save"}
+                    </button>
                 </div>
             </div>
             <input
