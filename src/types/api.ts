@@ -800,3 +800,72 @@ export type UserDetailResponse = {
     lastActivityDate?: string;
   };
 };
+
+export type ReportType = "property" | "agent" | "agency" | "user" | "review" | "project";
+export type ReportUserType = "developer" | "agency" | "agent" | "user";
+export type ReportStatus =
+  | "pending"
+  | "under-review"
+  | "reviewed"
+  | "resolved"
+  | "rejected"
+  | "escalated";
+export type ReportPriority = "low" | "medium" | "high" | "urgent";
+
+export type AdminReportListItem = {
+  _id: string;
+  reportType?: ReportType;
+  reportedItem?: string;
+  reportedItemLabel?: string;
+  reportedBy?: string | null;
+  reporterEmail?: string;
+  userType?: ReportUserType;
+  reason?: string;
+  description?: string;
+  attachments?: string[];
+  status?: ReportStatus;
+  priority?: ReportPriority;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  actionTaken?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AdminReportDetail = AdminReportListItem & {
+  reviewNotes?: string;
+  resolution?: {
+    status?: string;
+    notes?: string;
+    resolvedBy?: string | null;
+    resolvedAt?: string | null;
+  } | null;
+  internalNotes?: Array<{
+    note?: string;
+    addedBy?: string | null;
+    addedAt?: string | null;
+  }>;
+};
+
+export type ReportsListResponse = {
+  reports: AdminReportListItem[];
+  pagination: { page: number; limit: number; total: number; pages: number };
+  counts?: { pending: number; underReview: number; resolved: number; urgentOpen: number };
+};
+
+export type ReportDetailResponse = {
+  report: AdminReportDetail;
+};
+
+export type ListReportsParams = {
+  page?: number;
+  limit?: number;
+  status?: ReportStatus;
+  priority?: ReportPriority;
+  reportType?: ReportType;
+  userType?: ReportUserType;
+  search?: string;
+  startDate?: string;
+  endDate?: string;
+  counts?: boolean;
+};

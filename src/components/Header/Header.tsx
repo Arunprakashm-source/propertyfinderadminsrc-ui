@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { VerifiedIcon, SettingIcon, NotificationIcon, LeftArrowWhiteIcon } from "../../assets/icons";
 import mainbg from "../../assets/img/mainbg.png";
 import { useLocation } from "react-router-dom";
-import profileimg from '../../assets/img/user.png'
+import profileimg from '../../assets/img/profileless.png'
 const Header = ({ title, showBack, onBackClick }: { title: string, showBack: boolean, onBackClick: () => void }) => {
     const [isMdUp, setIsMdUp] = useState(false);
     const location = useLocation();
@@ -34,7 +34,7 @@ const Header = ({ title, showBack, onBackClick }: { title: string, showBack: boo
                             <p className="text-[#fff] text-[10px] font-[Bold]">2</p>
                         </div>
                     </button> */}
-                    <h4 className="text-[18px] font-[SemiBold] text-[#FFF] ">Arun</h4>
+                    <h4 className="text-[18px] font-[SemiBold] text-[#FFF] ">Admin</h4>
                     <div className="flex-shrink-0 cursor-pointer flex items-center rounded-full border-[2px] border-[#f5f5f5] ">
                         <img src={profileimg} alt="img" className="w-[40px] h-[40px] rounded-full shrink-0 object-cover" />
                     </div>

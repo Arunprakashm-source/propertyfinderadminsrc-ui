@@ -1,8 +1,10 @@
-import { useMemo, useRef, useState } from "react";
-import { DownArrowIcon, EyeDarkIcon, SearchIcon } from "../../assets/icons";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { DownArrowIcon, EyeDarkIcon, SearchIcon, TrashIcon } from "../../assets/icons";
 import Header from "../../components/Header/Header";
+import Loader from "../../components/Loader/loader";
 import Pagenation from "../../components/Pagenation/Pagenation";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 import { ReportPriorityBadge, ReportStatusBadge, ReportTypeBadge } from "./ReportBadges";
 import {
     REPORT_PRIORITIES,
@@ -11,13 +13,15 @@ import {
     USER_TYPES,
     formatDate,
     formatLabel,
-    reportsSeed,
-    type Report,
     type ReportPriority,
     type ReportStatus,
     type ReportType,
     type UserType,
 } from "./reportData";
+import { reportsService } from "../../services/reportsService";
+import { getApiErrorMessage } from "../../services/apiClient";
+import type { AdminReportListItem } from "../../types/api";
+import { useToast } from "../../context/ToastContext";
 
 const tableGrid =
     "grid-cols-[0.9fr_1.2fr_0.8fr_1.1fr_0.7fr_0.9fr_0.8fr_1fr_0.7fr]";
@@ -87,30 +91,26 @@ function FilterDropdown<T extends string>({
     );
 }
 
-function StatCards({ reports }: { reports: Report[] }) {
+function StatCards({ counts }: { counts?: { pending: number; underReview: number; resolved: number; urgentOpen: number } }) {
     const stats: StatCard[] = [
         {
             label: "Pending",
-            value: reports.filter((r) => r.status === "pending").length,
+            value: counts?.pending ?? 0,
             accent: "#707070",
         },
         {
             label: "Under Review",
-            value: reports.filter((r) => r.status === "under-review").length,
+            value: counts?.underReview ?? 0,
             accent: "#F59E0B",
         },
         {
             label: "Resolved",
-            value: reports.filter((r) => r.status === "resolved").length,
+            value: counts?.resolved ?? 0,
             accent: "#00A663",
         },
         {
             label: "Urgent Open",
-            value: reports.filter(
-                (r) =>
-                    r.priority === "urgent" &&
-                    !["resolved", "rejected"].includes(r.status)
-            ).length,
+            value: counts?.urgentOpen ?? 0,
             accent: "#EA3934",
         },
     ];
@@ -134,35 +134,95 @@ function StatCards({ reports }: { reports: Report[] }) {
 
 function ReportManagement() {
     const navigate = useNavigate();
+    const { push } = useToast();
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<ReportStatus | "all">("all");
     const [priorityFilter, setPriorityFilter] = useState<ReportPriority | "all">("all");
     const [typeFilter, setTypeFilter] = useState<ReportType | "all">("all");
     const [userTypeFilter, setUserTypeFilter] = useState<UserType | "all">("all");
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
+    const itemsPerPage = 10;
+    const [reports, setReports] = useState<AdminReportListItem[]>([]);
+    const [totalReports, setTotalReports] = useState(0);
+    const [counts, setCounts] = useState<{ pending: number; underReview: number; resolved: number; urgentOpen: number }>();
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-    const filteredReports = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        return reportsSeed.filter((r) => {
-            if (statusFilter !== "all" && r.status !== statusFilter) return false;
-            if (priorityFilter !== "all" && r.priority !== priorityFilter) return false;
-            if (typeFilter !== "all" && r.reportType !== typeFilter) return false;
-            if (userTypeFilter !== "all" && r.userType !== userTypeFilter) return false;
-            if (!q) return true;
-            return (
-                r.id.toLowerCase().includes(q) ||
-                r.reporterEmail.toLowerCase().includes(q) ||
-                r.reason.toLowerCase().includes(q) ||
-                r.reportedItemLabel.toLowerCase().includes(q) ||
-                r.description.toLowerCase().includes(q)
-            );
-        });
-    }, [search, statusFilter, priorityFilter, typeFilter, userTypeFilter]);
+    const loadReports = useCallback(
+        async (signal: AbortSignal) => {
+            setLoading(true);
+            setError(null);
+            try {
+                const data = await reportsService.listReports(
+                    {
+                        page: currentPage,
+                        limit: itemsPerPage,
+                        status: statusFilter === "all" ? undefined : statusFilter,
+                        priority: priorityFilter === "all" ? undefined : priorityFilter,
+                        reportType: typeFilter === "all" ? undefined : typeFilter,
+                        userType: userTypeFilter === "all" ? undefined : userTypeFilter,
+                        search: search || undefined,
+                        counts: true,
+                    },
+                    signal
+                );
+                if (signal.aborted) return;
+                setReports(data.reports ?? []);
+                setTotalReports(data.pagination?.total ?? 0);
+                setCounts(data.counts);
+            } catch (err) {
+                if (signal.aborted) return;
+                setReports([]);
+                setTotalReports(0);
+                setCounts(undefined);
+                setError(getApiErrorMessage(err, "Failed to load reports"));
+            } finally {
+                if (!signal.aborted) setLoading(false);
+            }
+        },
+        [currentPage, itemsPerPage, priorityFilter, search, statusFilter, typeFilter, userTypeFilter]
+    );
 
-    const paginatedRows = filteredReports.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
+    useEffect(() => {
+        const controller = new AbortController();
+        void loadReports(controller.signal);
+        return () => controller.abort();
+    }, [loadReports]);
+
+    const handleDeleteReport = useCallback(
+        async (report: AdminReportListItem) => {
+            const label = report.reportedItemLabel || report.reason || "this report";
+            const result = await Swal.fire({
+                title: "Delete report?",
+                text: `This will permanently delete ${label}.`,
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Yes, delete",
+                cancelButtonText: "Cancel",
+                confirmButtonColor: "#EA3934",
+                reverseButtons: true,
+            });
+            if (!result.isConfirmed) return;
+
+            try {
+                await reportsService.deleteReport(report._id);
+                push({
+                    type: "success",
+                    title: "Report deleted",
+                    description: "Report was deleted successfully.",
+                });
+                const controller = new AbortController();
+                await loadReports(controller.signal);
+                controller.abort();
+            } catch (err) {
+                push({
+                    type: "error",
+                    title: "Delete failed",
+                    description: getApiErrorMessage(err, "Failed to delete report"),
+                });
+            }
+        },
+        [loadReports, push]
     );
 
     const resetPageOnFilter = () => setCurrentPage(1);
@@ -176,7 +236,7 @@ function ReportManagement() {
             />
 
             <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
-                <StatCards reports={reportsSeed} />
+                <StatCards counts={counts} />
 
                 <div className="flex flex-col gap-[14px] mb-[24px]">
                     <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[40px] w-full md:w-[320px]">
@@ -237,6 +297,10 @@ function ReportManagement() {
                     </div>
                 </div>
 
+                {error && (
+                    <p className="text-[13px] text-[#EA3934] mb-[12px] font-[Medium]">{error}</p>
+                )}
+
                 <div className="overflow-x-auto w-full scrollbar-hide mb-[30px]">
                     <div className="min-w-[1280px]">
                         <div className="rounded-[10px] border border-[rgba(34,34,34,0.08)] overflow-hidden bg-white">
@@ -255,59 +319,71 @@ function ReportManagement() {
                             </div>
 
                             <div>
-                                {paginatedRows.length === 0 ? (
+                                {loading ? (
+                                    <div className="py-[40px] flex justify-center">
+                                        <Loader size={64} margin={0} />
+                                    </div>
+                                ) : reports.length === 0 ? (
                                     <div className="px-[14px] py-[40px] text-center">
                                         <p className="text-[14px] font-[Medium] text-[#707070]">
                                             No reports match your filters.
                                         </p>
                                     </div>
                                 ) : (
-                                    paginatedRows.map((row, idx) => (
+                                    reports.map((row, idx) => (
                                         <div
-                                            key={row.id}
-                                            className={`grid ${tableGrid} gap-[16px] items-center px-[14px] py-[12px] ${idx !== paginatedRows.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
+                                            key={row._id}
+                                            className={`grid ${tableGrid} gap-[16px] items-center px-[14px] py-[12px] ${idx !== reports.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
                                         >
-                                            <div>
+                                            <div className="truncate">
                                                 <p className="text-[12px] font-[SemiBold] text-[#6A3CA8]">
-                                                    {row.id}
+                                                    {row._id}
                                                 </p>
                                                 <p className="text-[11px] font-[Regular] text-[#707070] mt-[2px]">
-                                                    {formatDate(row.createdAt)}
+                                                    {formatDate(row.createdAt || "")}
                                                 </p>
                                             </div>
                                             <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                                                {row.reporterEmail}
+                                                {row.reporterEmail || "—"}
                                             </p>
-                                            <ReportTypeBadge type={row.reportType} />
+                                            <ReportTypeBadge type={row.reportType || "—"} />
                                             <p
                                                 className="text-[12px] font-[Regular] text-[#222] truncate"
-                                                title={row.reportedItemLabel}
+                                                title={row.reportedItemLabel || ""}
                                             >
-                                                {row.reportedItemLabel}
+                                                {row.reportedItemLabel || "General report"}
                                             </p>
                                             <p className="text-[12px] font-[Regular] text-[#222] capitalize">
-                                                {row.userType}
+                                                {row.userType || "user"}
                                             </p>
                                             <p
                                                 className="text-[12px] font-[Regular] text-[#222] truncate"
-                                                title={row.reason}
+                                                title={row.reason || row.description || ""}
                                             >
-                                                {row.reason}
+                                                {row.reason || row.description || "—"}
                                             </p>
-                                            <ReportStatusBadge status={row.status} />
-                                            <ReportPriorityBadge priority={row.priority} />
+                                            <ReportStatusBadge status={(row.status || "pending") as ReportStatus} />
+                                            <ReportPriorityBadge priority={(row.priority || "medium") as ReportPriority} />
                                             <div className="flex items-center justify-start gap-[10px]">
                                                 <button
                                                     type="button"
                                                     onClick={() =>
                                                         navigate(`/reportsmanagementdetail`, {
-                                                            state: { reportId: row.id },
+                                                            state: { reportId: row._id },
                                                         })
                                                     }
                                                     className="cursor-pointer p-[6px]"
                                                     aria-label="View report"
                                                 >
                                                     <EyeDarkIcon width={20} height={20} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => void handleDeleteReport(row)}
+                                                    className="cursor-pointer p-[6px]"
+                                                    aria-label="Delete report"
+                                                >
+                                                    <TrashIcon width={20} height={20} />
                                                 </button>
                                             </div>
                                         </div>
@@ -320,7 +396,7 @@ function ReportManagement() {
 
                 <Pagenation
                     currentPage={currentPage}
-                    totalItems={filteredReports.length}
+                    totalItems={totalReports}
                     itemsPerPage={itemsPerPage}
                     onPageChange={setCurrentPage}
                 />
