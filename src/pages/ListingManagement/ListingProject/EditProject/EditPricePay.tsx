@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { CalenderIcon, LeftArrowIcon, PlusIcon, RightArrowIcon, TrashIcon } from "../../../../assets/icons";
+import {
+    CalenderIcon,
+    LeftArrowIcon,
+    PlusIcon,
+    RightArrowIcon,
+    TrashIcon,
+} from "../../../../assets/icons";
 
 const weekDays = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -48,7 +54,7 @@ type PaymentOption = {
     handoverValue: string;
 };
 
-const ProjectPricePay = () => {
+const EditPricePay = () => {
     const [activeDatePicker, setActiveDatePicker] = useState<ActiveInstallmentPicker>(null);
     const [displayMonth, setDisplayMonth] = useState(() => new Date());
     const datePickerRef = useRef<HTMLDivElement>(null);
@@ -267,11 +273,37 @@ const ProjectPricePay = () => {
             </div>
         );
     };
-
     return (
         <div>
+            {/* project price */}
+            <div className="bg-white border border-[rgba(34,34,34,0.06)] md:p-[30px] p-[16px]">
+                <h3 className="text-[20px] font-[Bold] text-[#222] mb-[14px]">Project price</h3>
+                <div className="flex flex-col gap-[12px]">
+                    <div>
+                        <label className="text-[14px] font-[Bold] text-[#222] block mb-[6px]">
+                            Project Price <span className="text-[#EA3934]">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Enter the property price"
+                            className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] text-[13px] text-[#222] focus:outline-none"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[14px] font-[Bold] text-[#222] block mb-[6px]">
+                            Government Fees <span className="text-[#EA3934]">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Government Fees"
+                            className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] text-[13px] text-[#222] focus:outline-none"
+                        />
+                    </div>
+                </div>
+            </div>
+
             {/* payment plan */}
-            <div className="bg-white border border-[rgba(34,34,34,0.06)] rounded-[12px] md:p-[20px] p-[16px]">
+            <div className="bg-white border border-[rgba(34,34,34,0.06)] md:p-[30px] p-[16px]">
                 <h3 className="text-[20px] font-[Bold] text-[#222] mb-[14px]">Payment Plan</h3>
 
                 <div className="flex flex-col gap-[12px]">
@@ -411,8 +443,12 @@ const ProjectPricePay = () => {
                     Add another payment option
                 </button>
             </div>
+            <div className="flex items-center justify-end gap-[10px] mt-[30px]">
+                <button className="cursor-pointer h-[44px] rounded-[10px] px-[20px] border border-[#222]  text-[#222] text-[14px] font-[Bold] inline-flex items-center gap-[5px]">Discard</button>
+                <button className="cursor-pointer h-[44px] rounded-[10px] px-[20px] bg-[#6A3CA8] text-[#FFF] text-[14px] font-[Bold] inline-flex items-center gap-[5px]">Save changes</button>
+            </div>
         </div>
     );
 };
 
-export default ProjectPricePay; 
+export default EditPricePay; 

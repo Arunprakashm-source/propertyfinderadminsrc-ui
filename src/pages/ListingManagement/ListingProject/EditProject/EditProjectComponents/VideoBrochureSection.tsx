@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import home1img from "../../../../assets/img/home1.png";
-import home4img from "../../../../assets/img/home4.png";
+import home1img from "../../../../../assets/img/home1.png";
+import home4img from "../../../../../assets/img/home4.png";
 import {
     ChangeIcon,
     TrashIcon,
     PdfIcon,
     PlayIcon,
     DownloadIcon,
-} from "../../../../assets/icons";
+} from "../../../../../assets/icons";
 
 const formatUploadedDate = (ts: number) => {
     const d = new Date(ts);
@@ -148,7 +148,7 @@ const VideoBrochureSection = () => {
     return (
         <>
             {/* Project video */}
-            <div className="border-t border-b border-[rgba(34,34,34,0.10)] md:px-[20px] px-[16px] py-6 md:py-8">
+            <div className="border-b border-[rgba(34,34,34,0.10)] md:px-[30px] px-[16px] py-6 md:py-8">
                 <h2 className="text-[20px] font-[Bold] text-[#222] mb-4 md:mb-5">Project video</h2>
                 <div className="flex flex-col sm:flex-row sm:items-stretch gap-6 sm:gap-10">
                     <div className="relative w-full max-w-[560px] min-w-0 overflow-hidden rounded-[12px] bg-[#F0F0F0] aspect-video">
@@ -193,7 +193,7 @@ const VideoBrochureSection = () => {
             </div>
 
             {/* Brochure document */}
-            <div className="border-b border-[rgba(34,34,34,0.10)] md:px-[20px] px-[16px] py-6 md:py-8">
+            <div className="border-b border-[rgba(34,34,34,0.10)] md:px-[30px] px-[16px] py-6 md:py-8">
                 <h2 className="text-[20px] font-[Bold] text-[#222] mb-4 md:mb-5">Brochure document</h2>
                 {brochure ? (
                     <div className="flex flex-col sm:flex-row sm:items-stretch gap-6 sm:gap-10">
@@ -252,7 +252,7 @@ const VideoBrochureSection = () => {
             </div>
 
             {/* Masterplan */}
-            <div className="border-b border-[rgba(34,34,34,0.10)] md:px-[20px] px-[16px] py-6 md:py-8">
+            <div className="border-b border-[rgba(34,34,34,0.10)] md:px-[30px] px-[16px] py-6 md:py-8">
                 <h2 className="text-[20px] font-[Bold] text-[#222] mb-4 md:mb-5">Masterplan</h2>
                 {masterPlanSrc ? (
                     <div className=" flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10">

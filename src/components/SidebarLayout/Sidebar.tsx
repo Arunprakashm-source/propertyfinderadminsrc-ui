@@ -32,15 +32,24 @@ const navItems: NavItem[] = [
     },
     {
         icon: ListingIcon,
+        path: "/Master",
+        label: "Master",
+        hasDropdown: true,
+        subItems: [
+            { path: "/amenities", label: "Amenities" },
+            { path: "/jobtitles", label: "Job Titles" },
+        ]
+    },
+    {
+        icon: ListingIcon,
         path: "/listing",
         label: "Listing Management",
         hasDropdown: true,
         subItems: [
             { path: "/listingproperty", label: "Listing Properties" },
             { path: "/listingproject", label: "Listing Projects" },
-            { path: "/listingamenities", label: "Listing Amenities" },
-            { path: "/ratingsreviews", label: "Ratings & Reviews" },
-            { path: "/testimonials", label: "Testimonials" },
+            { path: "/listingprojectinquiry", label: "Listing Project Inquiries" },
+            { path: "/listingpropertyinquiry", label: "Listing Property Inquiries" },
         ]
     },
     {
@@ -223,17 +232,19 @@ function Sidebar() {
                                                         ? ["/agencyaccount", "/agencyaccountdetail", "/agencyaccountview"]
                                                         : subItem.path === "/agentaccount"
                                                             ? ["/agentaccount", "/agentaccountdetail", "/agentaccountview"]
-                                                            : subItem.path === "/listingproperty"
-                                                                ? ["/listingproperty", "/listingpropertydetail"]
-                                                                : subItem.path === "/listingproject"
-                                                                    ? ["/listingproject", "/listingprojectdetail"]
-                                                                    : subItem.path === "/listingamenities"
-                                                                        ? ["/listingamenities", "/listingamenitiesdetail"]
-                                                                        : subItem.path === "/cmsteam"
-                                                                            ? ["/cmsteam", "/cmsteamdetail"]
-                                                                            : subItem.path === "/cmsblogs"
-                                                                                ? ["/cmsblogs", "/cmsblogdetail"]
-                                                                                : [subItem.path];
+                                                            : subItem.path === "/amenities"
+                                                                ? ["/amenities", "/amenitiesdetail"]
+                                                                : subItem.path === "/listingproperty"
+                                                                    ? ["/listingproperty", "/listingpropertydetail"]
+                                                                    : subItem.path === "/listingproject"
+                                                                        ? ["/listingproject", "/listingprojectdetail"]
+                                                                        : subItem.path === "/listingamenities"
+                                                                            ? ["/listingamenities", "/listingamenitiesdetail"]
+                                                                            : subItem.path === "/cmsteam"
+                                                                                ? ["/cmsteam", "/cmsteamdetail"]
+                                                                                : subItem.path === "/cmsblogs"
+                                                                                    ? ["/cmsblogs", "/cmsblogdetail"]
+                                                                                    : [subItem.path];
                                         const isSubActive = subItemActivePaths.some(
                                             (p) => matchPath({ path: p, end: true }, location.pathname) != null
                                         );
