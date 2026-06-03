@@ -44,9 +44,10 @@ export type UsersListResponse = {
   counts?: {
     totalUsers: number;
     activeUsers: number;
+    inactiveUsers: number;
     bannedUsers: number;
-    verifiedEmails: number;
-    verifiedPhones: number;
+    verifiedEmails?: number;
+    verifiedPhones?: number;
   };
 };
 
@@ -87,9 +88,20 @@ export type DevelopersListPagination = {
   hasPrevPage: boolean;
 };
 
+export type DevelopersListCounts = {
+  totalDevelopers: number;
+  activeDevelopers: number;
+  inactiveDevelopers: number;
+  approvalPendingDevelopers: number;
+  declinedDevelopers: number;
+  invitedDevelopers: number;
+  expiredDevelopers: number;
+};
+
 export type DevelopersListResponse = {
   developers: AdminDeveloperListItem[];
   pagination: DevelopersListPagination;
+  counts?: DevelopersListCounts;
 };
 
 export type AdminAgencyListItem = {
@@ -118,9 +130,20 @@ export type AgenciesListPagination = {
   hasPrevPage: boolean;
 };
 
+export type AgenciesListCounts = {
+  totalAgencies: number;
+  activeAgencies: number;
+  inactiveAgencies: number;
+  approvalPendingAgencies: number;
+  declinedAgencies: number;
+  invitedAgencies: number;
+  expiredAgencies: number;
+};
+
 export type AgenciesListResponse = {
   agencies: AdminAgencyListItem[];
   pagination: AgenciesListPagination;
+  counts?: AgenciesListCounts;
 };
 
 export type ListAgenciesParams = {
@@ -194,9 +217,20 @@ export type AgentsListPagination = {
   hasPrevPage: boolean;
 };
 
+export type AgentsListCounts = {
+  totalAgents: number;
+  activeAgents: number;
+  inactiveAgents: number;
+  approvalPendingAgents: number;
+  declinedAgents: number;
+  invitedAgents: number;
+  expiredAgents: number;
+};
+
 export type AgentsListResponse = {
   agents: AdminAgentListItem[];
   pagination: AgentsListPagination;
+  counts?: AgentsListCounts;
 };
 
 export type ListAgentsParams = {

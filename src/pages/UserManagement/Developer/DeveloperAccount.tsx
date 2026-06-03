@@ -16,11 +16,15 @@ import Swal from "sweetalert2";
 import InviteDeveloperModal from "./InviteDevModal";
 import { developersService } from "../../../services/developersService";
 import { apiClient, getApiErrorMessage } from "../../../services/apiClient";
-import type { AdminDeveloperListItem, SupportedUrlsResponse } from "../../../types/api";
+import type {
+  AdminDeveloperListItem,
+  DevelopersListCounts,
+  SupportedUrlsResponse,
+} from "../../../types/api";
 import { useToast } from "../../../context/ToastContext";
 
 const tableGrid = "grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1.25fr_1fr_1fr]";
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 const SEARCH_DEBOUNCE_MS = 400;
 
 const sortOptions = [
@@ -178,6 +182,7 @@ function DeveloperAccount() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [developerImgBaseUrl, setDeveloperImgBaseUrl] = useState("");
+  const [listCounts, setListCounts] = useState<DevelopersListCounts>();
 
   useEffect(() => {
     let mounted = true;
@@ -241,11 +246,13 @@ function DeveloperAccount() {
         setDevelopers(data.developers ?? []);
         setTotalPages(Math.max(1, data.pagination?.totalPages ?? 1));
         setTotalDevelopers(data.pagination?.totalDevelopers ?? 0);
+        setListCounts(data.counts);
       } catch (err) {
         if (signal.aborted) return;
         setDevelopers([]);
         setTotalPages(1);
         setTotalDevelopers(0);
+        setListCounts(undefined);
         setError(getApiErrorMessage(err, "Failed to load developers"));
       } finally {
         if (!signal.aborted) setLoading(false);
@@ -298,15 +305,15 @@ function DeveloperAccount() {
       });
     }
   };
-  function StatCards({ items }: { items: AdminDeveloperListItem[] }) {
+  function StatCards({ counts }: { counts?: DevelopersListCounts }) {
     const stats = [
-      { label: "Total", value: items.length, accent: "#222" },
-      { label: "Active", value: items.filter((i) => i.isActive).length, accent: "#00A663" },
-      { label: "Inactive", value: items.filter((i) => !i.isActive).length, accent: "#EA3934" },
-      { label: "Approval Pending", value: items.filter((i) => i.invitationStatus === "pending").length, accent: "#F59E0B" },
-      { label: "Approval Declined", value: items.filter((i) => i.invitationStatus === "declined").length, accent: "#EA3934" },
-      { label: "Invited", value: items.filter((i) => i.invitationStatus === "invited").length, accent: "#00A663" },
-      { label: "Invitation Expired", value: items.filter((i) => i.invitationStatus === "expired").length, accent: "#EA3934" },
+      { label: "Total", value: counts?.totalDevelopers ?? 0, accent: "#222" },
+      { label: "Active", value: counts?.activeDevelopers ?? 0, accent: "#00A663" },
+      { label: "Inactive", value: counts?.inactiveDevelopers ?? 0, accent: "#EA3934" },
+      { label: "Approval Pending", value: counts?.approvalPendingDevelopers ?? 0, accent: "#F59E0B" },
+      // { label: "Approval Declined", value: counts?.declinedDevelopers ?? 0, accent: "#EA3934" },
+      // { label: "Invited", value: counts?.invitedDevelopers ?? 0, accent: "#00A663" },
+      // { label: "Invitation Expired", value: counts?.expiredDevelopers ?? 0, accent: "#EA3934" },
     ];
 
     return (
@@ -335,7 +342,7 @@ function DeveloperAccount() {
         />
 
         <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
-          <StatCards items={developers} />
+          <StatCards counts={listCounts} />
           <div className="flex md:flex-row flex-col items-center justify-between mb-[30px] gap-[10px]">
             <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[37px] w-full md:w-[280px]">
               <SearchIcon className="text-[#707070] shrink-0" />

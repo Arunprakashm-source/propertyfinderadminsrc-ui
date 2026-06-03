@@ -32,16 +32,6 @@ const navItems: NavItem[] = [
     },
     {
         icon: ListingIcon,
-        path: "/Master",
-        label: "Master",
-        hasDropdown: true,
-        subItems: [
-            { path: "/amenities", label: "Amenities" },
-            { path: "/jobtitles", label: "Job Titles" },
-        ]
-    },
-    {
-        icon: ListingIcon,
         path: "/listing",
         label: "Listing Management",
         hasDropdown: true,
@@ -50,6 +40,16 @@ const navItems: NavItem[] = [
             { path: "/listingproject", label: "Listing Projects" },
             { path: "/listingprojectinquiry", label: "Listing Project Inquiries" },
             { path: "/listingpropertyinquiry", label: "Listing Property Inquiries" },
+        ]
+    },
+    {
+        icon: ListingIcon,
+        path: "/Master",
+        label: "Master Data",
+        hasDropdown: true,
+        subItems: [
+            { path: "/amenities", label: "Amenities" },
+            { path: "/jobtitles", label: "Job Titles" },
         ]
     },
     {

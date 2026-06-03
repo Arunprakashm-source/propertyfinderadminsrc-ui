@@ -20,13 +20,14 @@ import { apiClient, getApiErrorMessage } from "../../../services/apiClient";
 import type {
   AdminAgentListItem,
   AgencyDropdownItem,
+  AgentsListCounts,
   SupportedUrlsResponse,
 } from "../../../types/api";
 import { useToast } from "../../../context/ToastContext";
 
 const tableGrid =
   "grid-cols-[1.2fr_1fr_1.2fr_1.1fr_0.9fr_1.15fr_1fr_1fr]";
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 const SEARCH_DEBOUNCE_MS = 400;
 
 const sortOptions = [
@@ -191,6 +192,7 @@ export default function AgentAccount() {
   const [agentImgBaseUrl, setAgentImgBaseUrl] = useState("");
   const [agencyImgBaseUrl, setAgencyImgBaseUrl] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [listCounts, setListCounts] = useState<AgentsListCounts>();
 
   const selectedAgencyLabel =
     selectedAgencyId === ALL_AGENCIES_VALUE
@@ -278,10 +280,12 @@ export default function AgentAccount() {
         if (signal.aborted) return;
         setAgents(data.agents ?? []);
         setTotalAgents(data.pagination?.totalAgents ?? 0);
+        setListCounts(data.counts);
       } catch (err) {
         if (signal.aborted) return;
         setAgents([]);
         setTotalAgents(0);
+        setListCounts(undefined);
         setError(getApiErrorMessage(err, "Failed to load agents"));
       } finally {
         if (!signal.aborted) setLoading(false);
@@ -346,15 +350,15 @@ export default function AgentAccount() {
   };
   const showEditButton = (agent: AdminAgentListItem) =>
     getAgentStatusLabel(agent) === "Approval pending";
-  function StatCards({ items }: { items: AdminAgentListItem[] }) {
+  function StatCards({ counts }: { counts?: AgentsListCounts }) {
     const stats = [
-      { label: "Total", value: items.length, accent: "#222" },
-      { label: "Active", value: items.filter((i) => i.isActive).length, accent: "#00A663" },
-      { label: "Inactive", value: items.filter((i) => !i.isActive).length, accent: "#EA3934" },
-      { label: "Approval Pending", value: items.filter((i) => i.invitationStatus === "pending").length, accent: "#F59E0B" },
-      { label: "Approval Declined", value: items.filter((i) => i.invitationStatus === "declined").length, accent: "#EA3934" },
-      { label: "Invited", value: items.filter((i) => i.invitationStatus === "invited").length, accent: "#00A663" },
-      { label: "Invitation Expired", value: items.filter((i) => i.invitationStatus === "expired").length, accent: "#EA3934" },
+      { label: "Total", value: counts?.totalAgents ?? 0, accent: "#222" },
+      { label: "Active", value: counts?.activeAgents ?? 0, accent: "#00A663" },
+      { label: "Inactive", value: counts?.inactiveAgents ?? 0, accent: "#EA3934" },
+      { label: "Approval Pending", value: counts?.approvalPendingAgents ?? 0, accent: "#F59E0B" },
+      // { label: "Approval Declined", value: counts?.declinedAgents ?? 0, accent: "#EA3934" },
+      // { label: "Invited", value: counts?.invitedAgents ?? 0, accent: "#00A663" },
+      // { label: "Invitation Expired", value: counts?.expiredAgents ?? 0, accent: "#EA3934" },
     ];
 
     return (
@@ -379,7 +383,7 @@ export default function AgentAccount() {
         <Header title="Agent Account" showBack={false} onBackClick={() => { }} />
 
         <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
-          <StatCards items={agents} />
+          <StatCards counts={listCounts} />
           <div className="flex md:flex-row flex-col items-center justify-between mb-[30px] gap-[10px] overflow-visible">
             <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[37px] w-full md:w-[280px] shrink-0">
               <SearchIcon className="text-[#707070] shrink-0" />

@@ -37,6 +37,7 @@ const EditProject = ({
                 <EditProjectStatus
                     projectId={projectId}
                     project={projectDetails}
+                    onAfterSave={onRefresh}
                     primaryActionLabel="Save changes"
                 />
             );

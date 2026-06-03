@@ -9,6 +9,7 @@ type EditProjectStatusProps = {
     projectId: string;
     project: Record<string, unknown>;
     onContinue?: () => void;
+    onAfterSave?: () => void | Promise<void>;
     primaryActionLabel?: string;
 };
 
@@ -19,6 +20,7 @@ type AmenityOption = {
 
 type FormState = {
     projectType: "ready" | "off-plan";
+    isActive: boolean;
     projectTitle: string;
     projectAddress: string;
     googlePlaceId: string;
@@ -32,6 +34,7 @@ const toFormState = (project: Record<string, unknown>): FormState => {
     const amenities = Array.isArray(project.amenities) ? project.amenities : [];
     return {
         projectType: project.projectType === "off-plan" ? "off-plan" : "ready",
+        isActive: project.isActive !== false,
         projectTitle: String(project.projectName || ""),
         projectAddress: String(location.address || ""),
         googlePlaceId: String(location.googlePlaceId || ""),
@@ -43,7 +46,13 @@ const toFormState = (project: Record<string, unknown>): FormState => {
     };
 };
 
-const EditProjectStatus = ({ projectId, project, onContinue, primaryActionLabel = "Save changes" }: EditProjectStatusProps) => {
+const EditProjectStatus = ({
+    projectId,
+    project,
+    onContinue,
+    onAfterSave,
+    primaryActionLabel = "Save changes",
+}: EditProjectStatusProps) => {
     const { push } = useToast();
     const toast = createToastNotify(push);
     const projectStatusOptions = [
@@ -181,6 +190,7 @@ const EditProjectStatus = ({ projectId, project, onContinue, primaryActionLabel 
         try {
             await projectsService.updateProject(projectId, {
                 projectType: form.projectType,
+                isActive: form.isActive,
                 projectName: form.projectTitle.trim(),
                 address: form.projectAddress.trim(),
                 googlePlaceId: form.googlePlaceId || undefined,
@@ -189,6 +199,7 @@ const EditProjectStatus = ({ projectId, project, onContinue, primaryActionLabel 
                 amenities: form.amenityIds,
             });
             toast.success("Project updated", "Project status and details updated successfully.");
+            await onAfterSave?.();
             onContinue?.();
         } catch (error: unknown) {
             const message =
@@ -202,7 +213,25 @@ const EditProjectStatus = ({ projectId, project, onContinue, primaryActionLabel 
     return (
         <div>
             <div className="bg-white p-[16px] md:p-[30px] border-b border-[rgba(34,34,34,0.10)]">
-                <h3 className="text-[20px] font-[Bold] text-[#222] mb-[30px]">Project status</h3>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-[16px] mb-[30px]">
+                    <h3 className="text-[20px] font-[Bold] text-[#222]">Project status</h3>
+                    <div className="flex items-center justify-between sm:justify-end gap-[12px]  rounded-[10px] px-[14px] h-[44px] min-w-[220px] sm:min-w-[260px]">
+                        <span className="text-[13px] font-[Medium] text-[#222]">Project Active</span>
+                        <button
+                            type="button"
+                            onClick={() => setForm((prev) => ({ ...prev, isActive: !prev.isActive }))}
+                            aria-pressed={form.isActive}
+                            aria-label={form.isActive ? "Deactivate project" : "Activate project"}
+                            className={`relative w-[44px] h-[24px] rounded-full transition-all duration-300 shrink-0 ${form.isActive ? "bg-[#6A3CA8]" : "bg-[#D1D5DB]"
+                                }`}
+                        >
+                            <span
+                                className={`absolute top-[2px] w-[20px] h-[20px] bg-white rounded-full transition-all duration-300 ${form.isActive ? "left-[22px]" : "left-[2px]"
+                                    }`}
+                            />
+                        </button>
+                    </div>
+                </div>
                 <p className="text-[14px] font-[SemiBold] text-[#222] mb-[15px]">Select project status <span className="text-[#EA3934]">*</span></p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
                     {projectStatusOptions.map(({ id, label, Icon }) => {

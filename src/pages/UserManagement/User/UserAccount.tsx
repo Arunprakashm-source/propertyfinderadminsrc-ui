@@ -7,11 +7,11 @@ import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { usersService } from "../../../services/usersService";
 import { apiClient, getApiErrorMessage } from "../../../services/apiClient";
-import type { AdminUserListItem } from "../../../types/api";
+import type { AdminUserListItem, UsersListResponse } from "../../../types/api";
 import profileless from "../../../assets/img/profileless.png";
 import { useToast } from "../../../context/ToastContext";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 const SEARCH_DEBOUNCE_MS = 400;
 const sortOptions = ["All", "Active", "Inactive", "Banned"] as const;
 type SortOption = (typeof sortOptions)[number];
@@ -121,6 +121,7 @@ function UserAccount() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userImgBaseUrl, setUserImgBaseUrl] = useState("");
+  const [listCounts, setListCounts] = useState<UsersListResponse["counts"]>();
 
   useEffect(() => {
     let mounted = true;
@@ -183,11 +184,13 @@ function UserAccount() {
       setUsers(data.users ?? []);
       setTotalPages(Math.max(1, data.pagination?.totalPages ?? 1));
       setTotalUsers(data.pagination?.totalUsers ?? 0);
+      setListCounts(data.counts);
     } catch (err) {
       if (signal.aborted) return;
       setUsers([]);
       setTotalPages(1);
       setTotalUsers(0);
+      setListCounts(undefined);
       setError(getApiErrorMessage(err, "Failed to load users"));
     } finally {
       if (!signal.aborted) setLoading(false);
@@ -241,12 +244,12 @@ function UserAccount() {
       });
     }
   };
-  function StatCards({ items }: { items: AdminUserListItem[] }) {
+  function StatCards({ counts }: { counts?: UsersListResponse["counts"] }) {
     const stats = [
-      { label: "Total", value: items.length, accent: "#222" },
-      { label: "Active", value: items.filter((i) => i.isActive).length, accent: "#00A663" },
-      { label: "Inactive", value: items.filter((i) => !i.isActive).length, accent: "#EA3934" },
-      { label: "Banned", value: items.filter((i) => i.isBanned).length, accent: "#F59E0B" },
+      { label: "Total", value: counts?.totalUsers ?? 0, accent: "#222" },
+      { label: "Active", value: counts?.activeUsers ?? 0, accent: "#00A663" },
+      { label: "Inactive", value: counts?.inactiveUsers ?? 0, accent: "#EA3934" },
+      { label: "Banned", value: counts?.bannedUsers ?? 0, accent: "#F59E0B" },
     ];
 
     return (
@@ -275,7 +278,7 @@ function UserAccount() {
 
       <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
 
-        <StatCards items={users} />
+        <StatCards counts={listCounts} />
         <div className="flex items-center justify-between mb-[30px] gap-[10px]">
           <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[40px] w-full md:w-[280px]">
             <SearchIcon className="text-[#707070] shrink-0" />

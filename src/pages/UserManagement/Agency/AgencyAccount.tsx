@@ -9,11 +9,11 @@ import Pagenation from "../../../components/Pagenation/Pagenation";
 import { useToast } from "../../../context/ToastContext";
 import { getApiErrorMessage } from "../../../services/apiClient";
 import { agenciesService } from "../../../services/agenciesService";
-import type { AdminAgencyListItem } from "../../../types/api";
+import type { AdminAgencyListItem, AgenciesListCounts } from "../../../types/api";
 import InviteAgencyModal from "./InviteAgencyModal";
 
 const tableGrid = "grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1.25fr_1fr_1fr]";
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 const SEARCH_DEBOUNCE_MS = 400;
 const sortOptions = ["All", "Active", "Inactive", "Approval Pending", "Approval Declined", "Invited", "Invitation Expired"] as const;
 type SortOption = (typeof sortOptions)[number];
@@ -82,6 +82,7 @@ export default function AgencyAccount() {
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [listCounts, setListCounts] = useState<AgenciesListCounts>();
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -113,10 +114,12 @@ export default function AgencyAccount() {
       });
       setRows(data.agencies || []);
       setTotalItems(data.pagination?.totalAgencies || 0);
+      setListCounts(data.counts);
     } catch (error) {
       push({ type: "error", title: "Failed to load agencies", description: getApiErrorMessage(error, "Unable to fetch agencies right now.") });
       setRows([]);
       setTotalItems(0);
+      setListCounts(undefined);
     } finally {
       setLoading(false);
     }
@@ -159,15 +162,15 @@ export default function AgencyAccount() {
     setCurrentPage(1);
     setIsSortOpen(false);
   };
-  function StatCards({ items }: { items: AdminAgencyListItem[] }) {
+  function StatCards({ counts }: { counts?: AgenciesListCounts }) {
     const stats = [
-      { label: "Total", value: items.length, accent: "#222" },
-      { label: "Active", value: items.filter((i) => i.isActive).length, accent: "#00A663" },
-      { label: "Inactive", value: items.filter((i) => !i.isActive).length, accent: "#EA3934" },
-      { label: "Approval Pending", value: items.filter((i) => i.invitationStatus === "pending").length, accent: "#F59E0B" },
-      { label: "Approval Declined", value: items.filter((i) => i.invitationStatus === "declined").length, accent: "#EA3934" },
-      { label: "Invited", value: items.filter((i) => i.invitationStatus === "invited").length, accent: "#00A663" },
-      { label: "Invitation Expired", value: items.filter((i) => i.invitationStatus === "expired").length, accent: "#EA3934" },
+      { label: "Total", value: counts?.totalAgencies ?? 0, accent: "#222" },
+      { label: "Active", value: counts?.activeAgencies ?? 0, accent: "#00A663" },
+      { label: "Inactive", value: counts?.inactiveAgencies ?? 0, accent: "#EA3934" },
+      { label: "Approval Pending", value: counts?.approvalPendingAgencies ?? 0, accent: "#F59E0B" },
+      // { label: "Approval Declined", value: counts?.declinedAgencies ?? 0, accent: "#EA3934" },
+      // { label: "Invited", value: counts?.invitedAgencies ?? 0, accent: "#00A663" },
+      // { label: "Invitation Expired", value: counts?.expiredAgencies ?? 0, accent: "#EA3934" },
     ];
 
     return (
@@ -191,7 +194,7 @@ export default function AgencyAccount() {
       <Header title="AgencyAccount" showBack={false} onBackClick={() => { }} />
       <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
 
-        <StatCards items={rows} />
+        <StatCards counts={listCounts} />
         <div className="flex md:flex-row flex-col items-center justify-between mb-[30px] gap-[10px]">
           <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[37px] w-full md:w-[280px]">
             <SearchIcon className="text-[#707070] shrink-0" />
