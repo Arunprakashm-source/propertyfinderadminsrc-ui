@@ -298,17 +298,44 @@ function DeveloperAccount() {
       });
     }
   };
+  function StatCards({ items }: { items: AdminDeveloperListItem[] }) {
+    const stats = [
+      { label: "Total", value: items.length, accent: "#222" },
+      { label: "Active", value: items.filter((i) => i.isActive).length, accent: "#00A663" },
+      { label: "Inactive", value: items.filter((i) => !i.isActive).length, accent: "#EA3934" },
+      { label: "Approval Pending", value: items.filter((i) => i.invitationStatus === "pending").length, accent: "#F59E0B" },
+      { label: "Approval Declined", value: items.filter((i) => i.invitationStatus === "declined").length, accent: "#EA3934" },
+      { label: "Invited", value: items.filter((i) => i.invitationStatus === "invited").length, accent: "#00A663" },
+      { label: "Invitation Expired", value: items.filter((i) => i.invitationStatus === "expired").length, accent: "#EA3934" },
+    ];
 
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-[14px] mb-[24px]">
+        {stats.map((s) => (
+          <div
+            key={s.label}
+            className="rounded-[12px] border border-[rgba(34,34,34,0.08)] bg-white p-[16px] flex flex-col gap-[6px]"
+          >
+            <p className="text-[12px] font-[Medium] text-[#707070]">{s.label}</p>
+            <p className="text-[28px] font-[Bold] leading-none" style={{ color: s.accent }}>
+              {s.value}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+  }
   return (
     <>
       <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
         <Header
           title="DeveloperAccount"
           showBack={false}
-          onBackClick={() => {}}
+          onBackClick={() => { }}
         />
 
         <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
+          <StatCards items={developers} />
           <div className="flex md:flex-row flex-col items-center justify-between mb-[30px] gap-[10px]">
             <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[37px] w-full md:w-[280px]">
               <SearchIcon className="text-[#707070] shrink-0" />
@@ -346,11 +373,10 @@ function DeveloperAccount() {
                             e.preventDefault();
                             handleSortDropdown(option);
                           }}
-                          className={`px-[16px] py-[10px] text-left text-[13px] font-[Medium] cursor-pointer hover:bg-[#F5F5F5] transition-colors ${
-                            selectedSort === option
-                              ? "text-[#3182CE] bg-[#F5F5F5]"
-                              : "text-[#222]"
-                          }`}
+                          className={`px-[16px] py-[10px] text-left text-[13px] font-[Medium] cursor-pointer hover:bg-[#F5F5F5] transition-colors ${selectedSort === option
+                            ? "text-[#3182CE] bg-[#F5F5F5]"
+                            : "text-[#222]"
+                            }`}
                         >
                           {option}
                         </button>
@@ -446,7 +472,7 @@ function DeveloperAccount() {
                             {formatCreatedAt(row.createdAt)}
                           </p>
                           <div className="flex items-center justify-start gap-[10px]">
-                          
+
                             <button
                               onClick={() =>
                                 navigate(
