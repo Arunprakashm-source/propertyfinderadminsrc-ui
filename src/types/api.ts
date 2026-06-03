@@ -501,6 +501,7 @@ export type SupportedUrlsResponse = {
   supportedUrls?: {
     userUrl?: { img?: string };
     propertyUrl?: { img?: string; vid?: string };
+    projectUrl?: { img?: string; vid?: string; doc?: string };
     agencyUrl?: { img?: string; doc?: string };
     developerUrl?: { img?: string; doc?: string };
     agentUrl?: { img?: string; doc?: string };
@@ -868,4 +869,125 @@ export type ListReportsParams = {
   startDate?: string;
   endDate?: string;
   counts?: boolean;
+};
+
+export type DeveloperDropdownItem = {
+  _id: string;
+  name?: string;
+  email?: string;
+  profilePicture?: string | null;
+  profilePictureUrl?: string | null;
+  isVerified?: boolean;
+  isActive?: boolean;
+  invitationStatus?: string;
+};
+
+export type DevelopersDropdownResponse = {
+  developers: DeveloperDropdownItem[];
+};
+
+export type ProjectLocationOption = {
+  _id?: string;
+  cityKey?: string;
+  displayName?: string;
+  projectCount?: number;
+};
+
+export type MasterDataProjectLocationsResponse = {
+  projectLocations?: ProjectLocationOption[];
+  projectlocations?: ProjectLocationOption[];
+};
+
+export type AdminProjectAgencyRef = {
+  _id?: string;
+  agencyName?: string;
+  email?: string;
+  profilePicture?: string | null;
+};
+
+export type AdminProjectDeveloperRef = {
+  _id?: string;
+  name?: string;
+  email?: string;
+  profilePicture?: string | null;
+};
+
+export type AdminProjectImage = {
+  url?: string;
+  isPrimary?: boolean;
+  order?: number;
+};
+
+export type AdminProjectListItem = {
+  _id: string;
+  projectName?: string;
+  slug?: string;
+  projectType?: string;
+  publishStatus?: string;
+  status?: string;
+  isActive?: boolean;
+  isFeatured?: boolean;
+  isVerified?: boolean;
+  location?: { city?: string; zone?: string; address?: string };
+  launchPrice?: { startingFrom?: number; currency?: string };
+  priceLabel?: string | null;
+  developer?: AdminProjectDeveloperRef | null;
+  authorizedAgencies?: AdminProjectAgencyRef[];
+  authorizedAgencyNames?: string[];
+  images?: AdminProjectImage[];
+  totalUnits?: number;
+  publishedAt?: string;
+  createdAt?: string;
+};
+
+export type ProjectsListResponse = {
+  projects: AdminProjectListItem[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalProjects: number;
+    limit: number;
+    hasNextPage: boolean;
+    hasPrevPage: boolean;
+  };
+};
+
+export type AdminProjectDetail = Record<string, unknown> & {
+  _id?: string;
+  projectName?: string;
+  description?: string;
+  aboutProject?: string;
+  projectType?: string;
+  publishStatus?: string;
+  status?: string;
+  location?: Record<string, unknown>;
+  launchPrice?: { startingFrom?: number; currency?: string };
+  governmentFees?: number;
+  paymentPlans?: unknown[];
+  images?: AdminProjectImage[];
+  masterPlan?: string[];
+  brochure?: string;
+  videoTour?: string;
+  virtualTour360?: string;
+  amenities?: AmenityMasterItem[];
+  developer?: AdminProjectDeveloperRef | null;
+  authorizedAgencies?: AdminProjectAgencyRef[];
+  faqs?: Array<{ _id?: string; question?: string; answer?: string }>;
+  isDldRegistered?: boolean;
+  dldRegistrationNumber?: string;
+  totalUnits?: number;
+  availableUnits?: number;
+  soldUnits?: number;
+  reservedUnits?: number;
+};
+
+export type ProjectDetailResponse = {
+  project: AdminProjectDetail;
+  unitProperties?: Array<Record<string, unknown>>;
+  unitSummary?: {
+    total?: number;
+    available?: number;
+    sold?: number;
+    reserved?: number;
+  };
 };

@@ -1,91 +1,127 @@
-import { DownArrowIcon, SearchIcon } from "../../../../assets/icons";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import LocationAdd from "../AddProject/AddProjectComponents/LocationAdd";
+import type { LocationFormValue } from "../AddProject/AddProjectComponents/LocationAdd";
+import { projectsService } from "../../../../services/projectsService";
+import { useToast } from "../../../../context/ToastContext";
+import { createToastNotify } from "../../../../utils/toastNotify";
 
-const EditLocation = () => {
-    const [isZoneDropdownOpen, setIsZoneDropdownOpen] = useState(false);
-    const [zone, setZone] = useState("Dubai");
-    const [searchLocation, setSearchLocation] = useState("Business Bay, Dubai");
-    const zoneOptions = ["Dubai", "Business Bay, Dubai", "Downtown Dubai", "Dubai Marina"];
+type EditLocationProps = {
+    projectId: string;
+    project: Record<string, unknown>;
+    onAfterSave: () => Promise<void>;
+    onContinue?: () => void;
+    primaryActionLabel?: string;
+};
 
-    const mapSrc = useMemo(() => {
-        const q = encodeURIComponent(searchLocation || zone || "Dubai");
-        return `https://maps.google.com/maps?q=${q}&z=14&output=embed`;
-    }, [searchLocation, zone]);
+const toStringValue = (value: unknown) => {
+    if (typeof value === "string") return value;
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+    return "";
+};
+
+const toLocationFormState = (project: Record<string, unknown>): LocationFormValue => {
+    const location = (project.location || {}) as Record<string, unknown>;
+    const coordinates = ((location.coordinates || {}) as { coordinates?: unknown }).coordinates;
+    const [lng, lat] = Array.isArray(coordinates) ? coordinates : [undefined, undefined];
+    const latitude = toStringValue(location.latitude || project.latitude || lat);
+    const longitude = toStringValue(location.longitude || project.longitude || lng);
+    const formattedAddress = toStringValue(location.address || project.address || project.projectAddress);
+    const searchLocation = formattedAddress || toStringValue(location.zone || location.city);
+
+    return {
+        zone: toStringValue(location.zone || project.zone),
+        city: toStringValue(location.city || project.city),
+        latitude,
+        longitude,
+        searchLocation,
+        formattedAddress,
+        placeId: toStringValue(location.googlePlaceId || project.googlePlaceId),
+    };
+};
+
+const EditLocation = ({ projectId, project, onAfterSave, onContinue, primaryActionLabel = "Save changes" }: EditLocationProps) => {
+    const { push } = useToast();
+    const toast = createToastNotify(push);
+    const initialState = useMemo(() => toLocationFormState(project), [project]);
+    const [form, setForm] = useState<LocationFormValue>(initialState);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        setForm(initialState);
+    }, [initialState]);
+
+    const handleDiscard = () => {
+        setForm(initialState);
+    };
+
+    const handleSave = async () => {
+        const latitude = Number.parseFloat(form.latitude);
+        const longitude = Number.parseFloat(form.longitude);
+        if (!form.zone.trim() || !form.city.trim()) {
+            toast.error("Validation required", "Please select a valid location to set zone and city.");
+            return;
+        }
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            toast.error("Validation required", "Please pin a valid location on map.");
+            return;
+        }
+
+        const address = form.formattedAddress.trim();
+        const placeId = form.placeId.trim();
+
+        setIsSaving(true);
+        try {
+            await projectsService.updateProject(projectId, {
+                location: {
+                    address: address || undefined,
+                    city: form.city.trim(),
+                    zone: form.zone.trim(),
+                    googlePlaceId: placeId || undefined,
+                    coordinates: {
+                        type: "Point",
+                        coordinates: [longitude, latitude],
+                    },
+                },
+            });
+            toast.success("Location updated", "Project location has been updated.");
+            await onAfterSave();
+            onContinue?.();
+        } catch (error: unknown) {
+            const message =
+                (error as { message?: string })?.message || "Failed to save project location.";
+            toast.error("Save failed", message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     return (
         <div>
-            <div className="flex flex-col">
-                <div className="bg-white border border-[rgba(34,34,34,0.06)] p-[16px] md:p-[30px]">
-                    <h3 className="text-[20px] font-[Bold] text-[#222] mb-[14px]">Location</h3>
-                    <div>
-                        <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[6px]">
-                            Zone location <span className="text-[#EA3934]">*</span>
-                        </label>
-                        <div className="relative">
-                            <button
-                                type="button"
-                                onClick={() => setIsZoneDropdownOpen((prev) => !prev)}
-                                className="cursor-pointer h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white px-[12px] pr-[20px] text-[13px] text-[#222] flex items-center justify-between"
-                            >
-                                <span>{zone}</span>
-                                <DownArrowIcon
-                                    width={10}
-                                    height={7}
-                                    className={`transition-transform ${isZoneDropdownOpen ? "rotate-180" : ""}`}
-                                />
-                            </button>
-                            {isZoneDropdownOpen && (
-                                <div className="absolute left-0 right-0 top-[48px] z-20 rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white shadow-[0_8px_20px_rgba(0,0,0,0.08)] py-[6px] max-h-[200px] overflow-y-auto">
-                                    {zoneOptions.map((option) => (
-                                        <button
-                                            key={option}
-                                            type="button"
-                                            onClick={() => {
-                                                setZone(option);
-                                                setSearchLocation(option);
-                                                setIsZoneDropdownOpen(false);
-                                            }}
-                                            className={`w-full text-left px-[12px] py-[8px] text-[13px] ${zone === option ? "text-[#0832AE] bg-[#F5F7FF]" : "text-[#222] hover:bg-[#F5F5F5]"
-                                                }`}
-                                        >
-                                            {option}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white border border-[rgba(34,34,34,0.06)] p-[16px] md:p-[30px]">
-                    <h4 className="text-[20px] font-[Bold] text-[#222] text-center md:mb-[30px] mb-[16px]">Pin location on map</h4>
-
-                    <div className="max-w-[360px] mx-auto md:mb-[40px] mb-[20px]">
-                        <div className="h-[36px] rounded-full bg-[#F5F5F5] px-[12px] flex items-center gap-[8px]">
-                            <SearchIcon width={14} height={14} />
-                            <input
-                                type="text"
-                                value={searchLocation}
-                                onChange={(e) => setSearchLocation(e.target.value)}
-                                placeholder="Search location"
-                                className="w-full bg-transparent text-[12px] font-[Regular] text-[#222] placeholder:text-[#707070] placeholder:text-[12px] placeholder:font-[Regular] focus:outline-none"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="rounded-[12px] border border-[rgba(34,34,34,0.08)] bg-[#EEF2F7] min-h-[360px] xl:w-[760px] lg:w-[550px] md:w-[550px] w-full mx-auto overflow-hidden">
-                        <iframe
-                            title="Google map location picker"
-                            src={mapSrc}
-                            className="h-[360px] w-full border-0"
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                        />
-                    </div>
-                </div>
+            <div className={isSaving ? "pointer-events-none opacity-60" : ""}>
+                <LocationAdd
+                    value={form}
+                    onChange={setForm}
+                    projectAddress={initialState.formattedAddress}
+                    projectAddressPlaceId={initialState.placeId}
+                />
             </div>
             <div className="flex items-center justify-end gap-[10px] mt-[30px]">
-                <button className="cursor-pointer h-[44px] rounded-[10px] px-[20px] border border-[#222]  text-[#222] text-[14px] font-[Bold] inline-flex items-center gap-[5px]">Discard</button>
-                <button className="cursor-pointer h-[44px] rounded-[10px] px-[20px] bg-[#6A3CA8] text-[#FFF] text-[14px] font-[Bold] inline-flex items-center gap-[5px]">Save changes</button>
+                <button
+                    type="button"
+                    onClick={handleDiscard}
+                    disabled={isSaving}
+                    className="cursor-pointer h-[44px] rounded-[10px] px-[20px] border border-[#222] text-[#222] text-[14px] font-[Bold] inline-flex items-center gap-[5px] disabled:opacity-50"
+                >
+                    Discard
+                </button>
+                <button
+                    type="button"
+                    onClick={() => void handleSave()}
+                    disabled={isSaving}
+                    className="cursor-pointer h-[44px] rounded-[10px] px-[20px] bg-[#EA3934] text-[#FFF] text-[14px] font-[Bold] inline-flex items-center gap-[5px] disabled:opacity-50"
+                >
+                    {isSaving ? "Saving..." : primaryActionLabel}
+                </button>
             </div>
         </div>
     );

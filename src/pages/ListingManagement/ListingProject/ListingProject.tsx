@@ -1,159 +1,45 @@
-import mainbg from "../../../assets/img/mainbg.png";
 import profileimg from "../../../assets/img/profileless.png";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { DownArrowIcon, EditIcon, EyeDarkIcon, LeftArrowIcon, LocationIcon, RightArrowIcon, SearchIcon, TrashIcon, } from "../../../assets/icons";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import {
+    CancelIcon,
+    DownArrowIcon,
+    EditIcon,
+    LeftArrowIcon,
+    LocationIcon,
+    RightArrowIcon,
+    SearchIcon,
+    TrashIcon,
+    EyeDarkIcon,
+} from "../../../assets/icons";
 import Header from "../../../components/Header/Header";
-import { Button } from "../../../components/Ui/Button";
+import Loader from "../../../components/Loader/loader";
 import Pagenation from "../../../components/Pagenation/Pagenation";
 import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+import { agenciesService } from "../../../services/agenciesService";
+import { getApiErrorMessage } from "../../../services/apiClient";
+import { useToast } from "../../../context/ToastContext";
+import { projectsService } from "../../../services/projectsService";
+import type {
+    AdminProjectListItem,
+    AgencyDropdownItem,
+    DeveloperDropdownItem,
+    ProjectLocationOption,
+} from "../../../types/api";
 
-type Row = {
-    id: number;
-    name: string;
-    location: string;
-    phone: string;
-    email: string;
-    price: string;
-    publishedAt: string;
-    status: string;
-    image: string;
-    agentname: string;
-    authorizedagency: string[];
-    agentImg: string;
-};
-const rowData: Row[] = [
-    {
-        id: 1,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "1234567890",
-        email: "dubai@gmail.com",
-        price: "AED 10,000,000",
-        publishedAt: "01 June 2026",
-        status: "Active",
-        image: profileimg,
-        agentname: "John Doe",
-        agentImg: profileimg,
-        authorizedagency: ["Emmar properties", "ALH Commercial", "Knight Frank", "ERA", "omniyat", "jbl"],
-    },
-    {
-        id: 2,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "9898980909",
-        email: "dubai@gmail.com",
-        price: "AED 10,000,000",
-        publishedAt: "01 June 2026",
-        status: "Sold",
-        image: profileimg,
-        agentname: "John Doe",
-        agentImg: profileimg,
-        authorizedagency: ["Emmar properties", "ALH Commercial", "Knight Frank", "ERA", "omniyat"]
-
-    },
-    {
-        id: 3,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "9898980909",
-        email: "dubai@gmail.com",
-        price: "AED 10,000,000",
-        publishedAt: "01 June 2026",
-        status: "Inactive",
-        image: profileimg,
-        agentname: "John Doe",
-        agentImg: profileimg,
-        authorizedagency: ["Emmar properties", "ALH Commercial", "Knight Frank", "ERA", "omniyat"]
-
-    },
-    {
-        id: 4,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "9898980909",
-        email: "dubai@gmail.com",
-        price: "AED 10,000,000",
-        publishedAt: "01 June 2026",
-        status: "Active",
-        image: profileimg,
-        agentname: "John Doe",
-        agentImg: profileimg,
-        authorizedagency: ["Emmar properties", "ALH Commercial", "Knight Frank", "ERA", "omniyat"]
-
-    },
-    {
-        id: 5,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "9898980909",
-        email: "dubai@gmail.com",
-        price: "AED 10,000,000",
-        publishedAt: "01 June 2026",
-        status: "Pending",
-        image: profileimg,
-        agentname: "John Doe",
-        agentImg: profileimg,
-        authorizedagency: ["Emmar properties", "ALH Commercial", "Knight Frank", "ERA", "omniyat"]
-    },
-    {
-        id: 6,
-        name: "Omniyat Bespoke | Villa",
-        location: "Dubai",
-        phone: "9898980909",
-        email: "dubai@gmail.com",
-        price: "AED 10,000,000",
-        publishedAt: "01 June 2026",
-        status: "Rented",
-        image: profileimg,
-        agentname: "John Doe",
-        agentImg: profileimg,
-        authorizedagency: ["Emmar properties", "ALH Commercial", "Knight Frank", "ERA", "omniyat"]
-
-    },
-];
-
-type AvailableDeveloper = {
-    id: number;
-    developerName: string;
-    developerTitle: string;
-    developerAvatar: string;
-};
-
-const availableDevelopersSeed: AvailableDeveloper[] = [
-    { id: 1, developerName: "Emaar Properties", developerTitle: "Leading Developer", developerAvatar: profileimg },
-    { id: 2, developerName: "Damac Properties", developerTitle: "Premium Developer", developerAvatar: profileimg },
-    { id: 3, developerName: "Nakheel", developerTitle: "Master Developer", developerAvatar: profileimg },
-    { id: 4, developerName: "Meraas", developerTitle: "Lifestyle Developer", developerAvatar: profileimg },
-    { id: 5, developerName: "Omniyat", developerTitle: "Luxury Developer", developerAvatar: profileimg },
-];
-
-type AvailableAgency = {
-    id: number;
-    agencyName: string;
-    email: string;
-    agencyAvatar: string;
-};
-
-const availableAgenciesSeed: AvailableAgency[] = [
-    { id: 1, agencyName: "Emmar properties", email: "contact@emmar.com", agencyAvatar: profileimg },
-    { id: 2, agencyName: "ALH Commercial", email: "info@alhcommercial.com", agencyAvatar: profileimg },
-    { id: 3, agencyName: "Knight Frank", email: "hello@knightfrank.com", agencyAvatar: profileimg },
-    { id: 4, agencyName: "ERA", email: "support@era.com", agencyAvatar: profileimg },
-    { id: 5, agencyName: "omniyat", email: "contact@omniyat.com", agencyAvatar: profileimg },
-    { id: 6, agencyName: "jbl", email: "info@jbl.com", agencyAvatar: profileimg },
-];
+const ITEMS_PER_PAGE = 10;
+const SEARCH_DEBOUNCE_MS = 400;
+const ALL_LOCATIONS = "All locations";
 
 const SORT_OPTIONS = [
     { name: "Newest", value: "newest" },
     { name: "Oldest", value: "oldest" },
+    { name: "Active", value: "active" },
+    { name: "Inactive", value: "inactive" },
+    { name: "Sold", value: "sold" },
     { name: "Price: Low to High", value: "price-asc" },
     { name: "Price: High to Low", value: "price-desc" },
 ] as const;
-
-const parsePriceValue = (price: string) => {
-    const digits = price.replace(/[^\d]/g, "");
-    return digits ? Number(digits) : 0;
-};
 
 const projectStatusBadgeClass =
     "rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center p-[6px_10px] text-[12px] font-[SemiBold] whitespace-nowrap";
@@ -264,52 +150,110 @@ const getCalendarCells = (date: Date) => {
     while (cells.length < 42) cells.push(null);
     return cells;
 };
+const toApiDateString = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+};
+
+const resolveProfileSrc = (
+    filename: string | null | undefined,
+    baseUrl: string,
+    fallback = profileimg
+) => {
+    const raw = (filename || "").trim();
+    if (!raw || raw.toLowerCase().includes("profileless")) return fallback;
+    if (/^https?:\/\//i.test(raw)) return raw;
+    const base = baseUrl.replace(/\/+$/, "");
+    return base ? `${base}/${encodeURIComponent(raw)}` : fallback;
+};
+
+const resolveProjectImageSrc = (images: AdminProjectListItem["images"], baseUrl: string) => {
+    const primary = images?.find((img) => img.isPrimary) ?? images?.[0];
+    const raw = (primary?.url || "").trim();
+    if (!raw) return profileimg;
+    if (/^https?:\/\//i.test(raw)) return raw;
+    const base = baseUrl.replace(/\/+$/, "");
+    return base ? `${base}/${encodeURIComponent(raw)}` : profileimg;
+};
+
+const formatProjectLocation = (project: AdminProjectListItem) => {
+    const parts = [project.location?.city, project.location?.zone].filter(Boolean);
+    return parts.length ? parts.join(", ") : "—";
+};
+
+const formatPublishedAt = (value?: string) => {
+    if (!value) return "—";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    return date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+};
+
 function ListingProject() {
-    const navigate = useNavigate()
-    const [fromDate, setFromDate] = useState(new Date(2025, 11, 1));
-    const [toDate, setToDate] = useState(new Date(2025, 11, 12));
+    const navigate = useNavigate();
+    const { push } = useToast();
+    const [fromDate, setFromDate] = useState<Date | null>(null);
+    const [toDate, setToDate] = useState<Date | null>(null);
     const [activeDatePicker, setActiveDatePicker] = useState<"from" | "to" | null>(null);
-    const [displayMonth, setDisplayMonth] = useState(new Date(2026, 11, 1));
+    const [displayMonth, setDisplayMonth] = useState(() => new Date());
     const fromDateRef = useRef<HTMLDivElement>(null);
     const toDateRef = useRef<HTMLDivElement>(null);
     const locationDropdownRef = useRef<HTMLDivElement>(null);
     const [isLocationDropdownOpen, setIsLocationDropdownOpen] = useState(false);
-    const [selectedLocation, setSelectedLocation] = useState("All locations");
-    const locationOptions = ["All locations", "Dubai", "Norway", "SouthAfrica", "For Sale", "Denmark", "switzerland"];
+    const [selectedLocation, setSelectedLocation] = useState(ALL_LOCATIONS);
+    const [locationOptions, setLocationOptions] = useState<ProjectLocationOption[]>([]);
+    const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
 
     const [isDeveloperDropdownOpen, setIsDeveloperDropdownOpen] = useState(false);
-    const [selectedDeveloper, setSelectedDeveloper] = useState<AvailableDeveloper | null>(null);
+    const [selectedDeveloper, setSelectedDeveloper] = useState<DeveloperDropdownItem | null>(null);
     const [developerSearch, setDeveloperSearch] = useState("");
+    const [developerOptions, setDeveloperOptions] = useState<DeveloperDropdownItem[]>([]);
     const developerDropdownRef = useRef<HTMLDivElement>(null);
 
     const [isAgencyDropdownOpen, setIsAgencyDropdownOpen] = useState(false);
-    const [selectedAgency, setSelectedAgency] = useState<AvailableAgency | null>(null);
+    const [selectedAgency, setSelectedAgency] = useState<AgencyDropdownItem | null>(null);
     const [agencySearch, setAgencySearch] = useState("");
+    const [agencyOptions, setAgencyOptions] = useState<AgencyDropdownItem[]>([]);
     const agencyDropdownRef = useRef<HTMLDivElement>(null);
 
     const [sortBy, setSortBy] = useState<(typeof SORT_OPTIONS)[number]["value"]>("newest");
     const [isSortOpen, setIsSortOpen] = useState(false);
     const sortRef = useRef<HTMLDivElement>(null);
 
+    const [searchInput, setSearchInput] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [projects, setProjects] = useState<AdminProjectListItem[]>([]);
+    const [totalProjects, setTotalProjects] = useState(0);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [projectImgBaseUrl, setProjectImgBaseUrl] = useState("");
+    const [developerImgBaseUrl, setDeveloperImgBaseUrl] = useState("");
+
     const filteredDevelopers = useMemo(() => {
         const q = developerSearch.trim().toLowerCase();
-        if (!q) return availableDevelopersSeed;
-        return availableDevelopersSeed.filter(
+        if (!q) return developerOptions;
+        return developerOptions.filter(
             (d) =>
-                d.developerName.toLowerCase().includes(q) ||
-                d.developerTitle.toLowerCase().includes(q)
+                (d.name || "").toLowerCase().includes(q) ||
+                (d.email || "").toLowerCase().includes(q)
         );
-    }, [developerSearch]);
+    }, [developerSearch, developerOptions]);
 
     const filteredAgencies = useMemo(() => {
         const q = agencySearch.trim().toLowerCase();
-        if (!q) return availableAgenciesSeed;
-        return availableAgenciesSeed.filter(
+        if (!q) return agencyOptions;
+        return agencyOptions.filter(
             (a) =>
-                a.agencyName.toLowerCase().includes(q) ||
-                a.email.toLowerCase().includes(q)
+                (a.agencyName || "").toLowerCase().includes(q) ||
+                (a.email || "").toLowerCase().includes(q)
         );
-    }, [agencySearch]);
+    }, [agencySearch, agencyOptions]);
 
     const selectedSortLabel =
         SORT_OPTIONS.find((item) => item.value === sortBy)?.name ?? "Newest";
@@ -344,43 +288,119 @@ function ListingProject() {
         return () => document.removeEventListener("mousedown", onDocMouseDown);
     }, [isSortOpen]);
 
-    const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 5;
-
-    const filteredRows = useMemo(() => {
-        let rows = [...rowData];
-
-        if (selectedAgency) {
-            const agencyName = selectedAgency.agencyName.trim().toLowerCase();
-            rows = rows.filter((row) =>
-                row.authorizedagency.some(
-                    (agency) => agency.trim().toLowerCase() === agencyName
-                )
-            );
-        }
-
-        rows.sort((a, b) => {
-            switch (sortBy) {
-                case "oldest":
-                    return a.publishedAt.localeCompare(b.publishedAt);
-                case "price-asc":
-                    return parsePriceValue(a.price) - parsePriceValue(b.price);
-                case "price-desc":
-                    return parsePriceValue(b.price) - parsePriceValue(a.price);
-                case "newest":
-                default:
-                    return b.publishedAt.localeCompare(a.publishedAt);
-            }
-        });
-
-        return rows;
-    }, [selectedAgency, sortBy]);
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setDebouncedSearch(searchInput.trim());
+            setCurrentPage(1);
+        }, SEARCH_DEBOUNCE_MS);
+        return () => window.clearTimeout(timer);
+    }, [searchInput]);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [selectedAgency, sortBy, selectedDeveloper]);
+    }, [selectedAgency, sortBy, selectedDeveloper, selectedLocationId, fromDate, toDate]);
 
-    const paginatedRows = filteredRows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    useEffect(() => {
+        let mounted = true;
+        const controller = new AbortController();
+        Promise.all([
+            projectsService.getSupportedUrls(controller.signal),
+            projectsService.listProjectLocations(controller.signal),
+            projectsService.listDevelopersForDropdown(undefined, controller.signal),
+            agenciesService.listAgenciesForDropdown(undefined, controller.signal),
+        ])
+            .then(([urls, locations, devRes, agencyRes]) => {
+                if (!mounted) return;
+                setProjectImgBaseUrl(
+                    (urls.supportedUrls?.projectUrl?.img || "").trim().replace(/\/?$/, "/")
+                );
+                setDeveloperImgBaseUrl(
+                    (urls.supportedUrls?.developerUrl?.img || "").trim().replace(/\/?$/, "/")
+                );
+                setLocationOptions(locations);
+                setDeveloperOptions(devRes.developers || []);
+                setAgencyOptions(agencyRes.agencies || []);
+            })
+            .catch(() => undefined);
+        return () => {
+            mounted = false;
+            controller.abort();
+        };
+    }, []);
+
+    const fetchProjects = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await projectsService.listProjects({
+                page: currentPage,
+                limit: ITEMS_PER_PAGE,
+                search: debouncedSearch || undefined,
+                developer: selectedDeveloper?._id,
+                agency: selectedAgency?._id,
+                city: selectedLocationId || undefined,
+                sortBy,
+                startDate: fromDate ? toApiDateString(fromDate) : undefined,
+                endDate: toDate ? toApiDateString(toDate) : undefined,
+            });
+            setProjects(response.projects || []);
+            setTotalProjects(response.pagination?.totalProjects ?? 0);
+        } catch (err: unknown) {
+            setError(getApiErrorMessage(err, "Failed to load projects"));
+            setProjects([]);
+            setTotalProjects(0);
+        } finally {
+            setLoading(false);
+        }
+    }, [
+        currentPage,
+        debouncedSearch,
+        selectedDeveloper?._id,
+        selectedAgency?._id,
+        selectedLocationId,
+        sortBy,
+        fromDate,
+        toDate,
+    ]);
+
+    useEffect(() => {
+        fetchProjects();
+    }, [fetchProjects]);
+
+    const handleDeleteProject = useCallback(
+        async (project: AdminProjectListItem) => {
+            const label = project.projectName?.trim() || "this project";
+            const result = await Swal.fire({
+                title: "Delete project?",
+                text: `This will permanently delete "${label}" and all related data (units, inquiries, reports, allocations, and more). This cannot be undone.`,
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonText: "Yes, delete",
+                cancelButtonText: "Cancel",
+                confirmButtonColor: "#EA3934",
+                reverseButtons: true,
+            });
+            if (!result.isConfirmed) return;
+
+            try {
+                await projectsService.deleteProject(project._id);
+                push({
+                    type: "success",
+                    title: "Project deleted",
+                    description: "Project and related records were deleted successfully.",
+                });
+                await fetchProjects();
+            } catch (err) {
+                push({
+                    type: "error",
+                    title: "Delete failed",
+                    description: getApiErrorMessage(err, "Failed to delete project"),
+                });
+            }
+        },
+        [fetchProjects, push]
+    );
+
     const calendarCells = getCalendarCells(displayMonth);
 
     const shiftMonth = (direction: -1 | 1) => {
@@ -390,7 +410,8 @@ function ListingProject() {
     const openDatePicker = (type: "from" | "to") => {
         setActiveDatePicker((prev) => (prev === type ? null : type));
         const sourceDate = type === "from" ? fromDate : toDate;
-        setDisplayMonth(new Date(sourceDate.getFullYear(), sourceDate.getMonth(), 1));
+        const monthSource = sourceDate ?? new Date();
+        setDisplayMonth(new Date(monthSource.getFullYear(), monthSource.getMonth(), 1));
     };
 
     const selectDate = (day: number) => {
@@ -400,15 +421,48 @@ function ListingProject() {
         setActiveDatePicker(null);
     };
 
-    const renderDatePicker = (type: "from" | "to", selectedDate: Date, side: "left" | "right") => (
+    const clearDate = (type: "from" | "to", event: MouseEvent) => {
+        event.stopPropagation();
+        if (type === "from") setFromDate(null);
+        else setToDate(null);
+        setActiveDatePicker(null);
+    };
+
+    const renderDatePicker = (
+        type: "from" | "to",
+        selectedDate: Date | null,
+        side: "left" | "right"
+    ) => (
         <div className="relative" ref={type === "from" ? fromDateRef : toDateRef}>
-            <button
-                type="button"
-                onClick={() => openDatePicker(type)}
-                className="cursor-pointer h-[33px] rounded-full bg-white px-[12px] text-[12px] font-[SemiBold] text-[#222] inline-flex items-center"
-            >
-                {formatDisplayDate(selectedDate)}
-            </button>
+            <div className="inline-flex items-center h-[33px] rounded-full bg-white">
+                <button
+                    type="button"
+                    onClick={() => openDatePicker(type)}
+                    className={`cursor-pointer h-full rounded-full text-[12px] inline-flex items-center ${
+                        selectedDate ? "pl-[12px] pr-[4px]" : "px-[12px]"
+                    } ${
+                        selectedDate
+                            ? "font-[SemiBold] text-[#222]"
+                            : "font-[Regular] text-[#707070]"
+                    }`}
+                >
+                    {selectedDate
+                        ? formatDisplayDate(selectedDate)
+                        : type === "from"
+                          ? "From date"
+                          : "To date"}
+                </button>
+                {selectedDate && (
+                    <button
+                        type="button"
+                        onClick={(e) => clearDate(type, e)}
+                        className="cursor-pointer h-full pr-[10px] pl-[2px] inline-flex items-center justify-center shrink-0"
+                        aria-label={type === "from" ? "Clear from date" : "Clear to date"}
+                    >
+                        <CancelIcon width={10} height={10} stroke="#707070" />
+                    </button>
+                )}
+            </div>
             {activeDatePicker === type && (
                 <div
                     className={`absolute ${side === "left" ? "md:right-0 " : "md:right-0 right-[-80px] "} top-[40px] z-20 h-[320px] w-[280px] rounded-[12px] bg-white p-[20px] shadow-[0_8px_20px_rgba(0,0,0,0.12)]`}
@@ -422,13 +476,20 @@ function ListingProject() {
                             <LeftArrowIcon width={14} height={14} />
                         </button>
                         <p className="text-[16px] font-[Bold] text-[#222]">{monthTitle(displayMonth)}</p>
-                        <button type="button" onClick={() => shiftMonth(1)} className="text-[16px] font-[SemiBold] text-[#222] px-[6px]">
+                        <button
+                            type="button"
+                            onClick={() => shiftMonth(1)}
+                            className="text-[16px] font-[SemiBold] text-[#222] px-[6px]"
+                        >
                             <RightArrowIcon width={14} height={14} />
                         </button>
                     </div>
                     <div className="grid grid-cols-7 gap-y-[6px] text-center">
                         {weekDays.map((d, index) => (
-                            <span key={`${type}-day-${d}-${index}`} className="text-[13px] font-[SemiBold] text-[#222]">
+                            <span
+                                key={`${type}-day-${d}-${index}`}
+                                className="text-[13px] font-[SemiBold] text-[#222]"
+                            >
                                 {d}
                             </span>
                         ))}
@@ -442,6 +503,7 @@ function ListingProject() {
                                 );
                             }
                             const isSelected =
+                                selectedDate != null &&
                                 selectedDate.getDate() === day &&
                                 selectedDate.getMonth() === displayMonth.getMonth() &&
                                 selectedDate.getFullYear() === displayMonth.getFullYear();
@@ -450,10 +512,11 @@ function ListingProject() {
                                     key={`${type}-${day}-${idx}`}
                                     type="button"
                                     onClick={() => selectDate(day)}
-                                    className={`h-[30px] w-[30px] mx-auto rounded-full text-[12px] font-[SemiBold] border transition-colors ${isSelected
-                                        ? "bg-[#EA3934] text-white border-[#EA3934]"
-                                        : "text-[#707070] border-[rgba(34,34,34,0.10)] hover:bg-[#F2F2F2]"
-                                        }`}
+                                    className={`h-[30px] w-[30px] mx-auto rounded-full text-[12px] font-[SemiBold] border transition-colors ${
+                                        isSelected
+                                            ? "bg-[#EA3934] text-white border-[#EA3934]"
+                                            : "text-[#707070] border-[rgba(34,34,34,0.10)] hover:bg-[#F2F2F2]"
+                                    }`}
                                 >
                                     {day}
                                 </button>
@@ -464,23 +527,20 @@ function ListingProject() {
             )}
         </div>
     );
+    const locationLabels = [ALL_LOCATIONS, ...locationOptions.map((l) => l.displayName || "")];
+
     return (
         <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
-            {/* Header */}
-            <Header
-                title="Listing Projects"
-                showBack={false}
-                onBackClick={() => { }}
-            />
+            <Header title="Listing Projects" showBack={false} onBackClick={() => {}} />
 
-            {/* Content */}
             <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
-                {/* Search and Add New Button */}
                 <div className="flex flex-wrap items-center mb-[30px] gap-[10px]">
-                    <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[40px]">
+                    <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[40px] min-w-[200px]">
                         <SearchIcon className="text-[#707070] shrink-0" />
                         <input
                             type="search"
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
                             placeholder="Search here"
                             className="w-full bg-transparent text-[12px] font-[Regular] text-[#222] placeholder:text-[#707070] focus:outline-none"
                         />
@@ -496,7 +556,7 @@ function ListingProject() {
                             className="cursor-pointer  h-[40px] rounded-[15px] border border-[rgba(34,34,34,0.12)] px-[14px] text-left text-[14px] font-[Regular] flex items-center justify-between gap-[30px] bg-white"
                         >
                             <span className={selectedDeveloper ? "text-[#222] font-[Medium]" : "text-[#707070]"}>
-                                {selectedDeveloper ? selectedDeveloper.developerName : "Select developer"}
+                                {selectedDeveloper ? selectedDeveloper.name : "Select developer"}
                             </span>
                             <DownArrowIcon
                                 width={11}
@@ -520,6 +580,17 @@ function ListingProject() {
                                     </div>
                                 </div>
                                 <div className="max-h-[200px] overflow-y-auto px-[12px] scrollbar-hide">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedDeveloper(null);
+                                            setIsDeveloperDropdownOpen(false);
+                                            setDeveloperSearch("");
+                                        }}
+                                        className="w-full text-left py-[10px] text-[12px] font-[Medium] text-[#707070] border-b border-[rgba(34,34,34,0.08)]"
+                                    >
+                                        All developers
+                                    </button>
                                     {filteredDevelopers.length === 0 ? (
                                         <p className="text-[12px] text-[#707070] py-[12px] text-center">
                                             No developers found
@@ -527,7 +598,7 @@ function ListingProject() {
                                     ) : (
                                         filteredDevelopers.map((developer) => (
                                             <button
-                                                key={developer.id}
+                                                key={developer._id}
                                                 type="button"
                                                 onClick={() => {
                                                     setSelectedDeveloper(developer);
@@ -537,16 +608,20 @@ function ListingProject() {
                                                 className="w-full text-left flex gap-[12px] items-start py-[12px] border-b border-[rgba(34,34,34,0.08)] rounded-[6px] px-[4px] -mx-[4px] transition-colors"
                                             >
                                                 <img
-                                                    src={developer.developerAvatar}
+                                                    src={resolveProfileSrc(
+                                                        developer.profilePicture,
+                                                        developerImgBaseUrl,
+                                                        developer.profilePictureUrl || profileimg
+                                                    )}
                                                     alt=""
                                                     className="h-[40px] w-[40px] rounded-full object-cover shrink-0"
                                                 />
                                                 <div className="flex-1 min-w-0 pt-[2px]">
                                                     <p className="text-[12px] font-[Bold] text-[#222] leading-tight">
-                                                        {developer.developerName}
+                                                        {developer.name}
                                                     </p>
-                                                    <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px] leading-tight">
-                                                        {developer.developerTitle}
+                                                    <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px] leading-tight truncate">
+                                                        {developer.email}
                                                     </p>
                                                 </div>
                                             </button>
@@ -609,7 +684,7 @@ function ListingProject() {
                                     ) : (
                                         filteredAgencies.map((agency) => (
                                             <button
-                                                key={agency.id}
+                                                key={agency._id}
                                                 type="button"
                                                 onClick={() => {
                                                     setSelectedAgency(agency);
@@ -619,7 +694,11 @@ function ListingProject() {
                                                 className="w-full text-left flex gap-[12px] items-start py-[12px] border-b border-[rgba(34,34,34,0.08)] rounded-[6px] px-[4px] -mx-[4px] transition-colors"
                                             >
                                                 <img
-                                                    src={agency.agencyAvatar}
+                                                    src={resolveProfileSrc(
+                                                        agency.profilePicture,
+                                                        "",
+                                                        agency.profilePictureUrl || profileimg
+                                                    )}
                                                     alt=""
                                                     className="h-[40px] w-[40px] rounded-full object-cover shrink-0"
                                                 />
@@ -686,18 +765,26 @@ function ListingProject() {
                             onClick={() => setIsLocationDropdownOpen((o) => !o)}
                             className="cursor-pointer h-[33px] w-full rounded-full bg-white px-[14px] flex items-center justify-between text-left text-[13px] font-[Regular] text-[#222]"
                         >
-                            <span className={selectedLocation === "All locations" ? "text-[#707070]" : "text-[#222]"}>{selectedLocation}</span>
+                            <span className={selectedLocation === ALL_LOCATIONS ? "text-[#707070]" : "text-[#222]"}>{selectedLocation}</span>
                             <DownArrowIcon className={`shrink-0 transition-transform ${isLocationDropdownOpen ? "rotate-180" : ""}`} width={11} height={7} />
                         </button>
                         {isLocationDropdownOpen && (
                             <div className="absolute left-0 right-0 top-[44px] z-20 max-h-[200px] overflow-y-auto bg-white border border-[rgba(34,34,34,0.10)] rounded-[10px] shadow-[0_6px_16px_rgba(0,0,0,0.12)] py-[6px]">
-                                {locationOptions.map((loc) => (
+                                {locationLabels.map((loc) => (
                                     <button
                                         key={loc}
                                         type="button"
                                         onMouseDown={(e) => {
                                             e.preventDefault();
                                             setSelectedLocation(loc);
+                                            if (loc === ALL_LOCATIONS) {
+                                                setSelectedLocationId(null);
+                                            } else {
+                                                const match = locationOptions.find(
+                                                    (item) => item.displayName === loc
+                                                );
+                                                setSelectedLocationId(match?._id || loc);
+                                            }
                                             setIsLocationDropdownOpen(false);
                                         }}
                                         className={`w-full text-left px-[14px] py-[9px] text-[13px] font-[Medium] hover:bg-[#F5F5F5] ${selectedLocation === loc ? "text-[#EA3934] bg-[#FDF2F2]" : "text-[#222]"}`}
@@ -718,9 +805,14 @@ function ListingProject() {
                         {renderDatePicker("to", toDate, "right")}
                     </div>
                 </div>
+
+                {error && (
+                    <p className="text-[13px] text-[#EA3934] mb-[12px] font-[Medium]">{error}</p>
+                )}
+
                 {/* Table */}
                 <div className="overflow-x-auto w-full scrollbar-hide mb-[30px]">
-                    <div className="min-w-[1150px]">
+                    <div className="min-w-[1250px]">
                         <div className="rounded-[10px] border border-[rgba(34,34,34,0.08)] overflow-hidden bg-white">
                             <div className="grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr_1fr_1fr] gap-[30px] items-center px-[14px] py-[12px] bg-[#F5F5F5] border-b border-[rgba(34,34,34,0.08)]">
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Name</p>
@@ -732,38 +824,66 @@ function ListingProject() {
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Actions</p>
                             </div>
 
-                            <div>
-                                {paginatedRows.map((row, idx) => {
+                            {loading ? (
+                                <div className="py-[40px] flex justify-center">
+                                    <Loader size={64} margin={0} />
+                                </div>
+                            ) : projects.length === 0 ? (
+                                <p className="text-[13px] text-[#707070] py-[24px] text-center">
+                                    No projects found
+                                </p>
+                            ) : (
+                                <div>
+                                {projects.map((row, idx) => {
+                                    const agencyNames =
+                                        row.authorizedAgencyNames ||
+                                        row.authorizedAgencies?.map((a) => a.agencyName || "").filter(Boolean) ||
+                                        [];
                                     const { visible: visibleAgencies, overflowLabel } =
-                                        formatAuthorizedAgencies(row.authorizedagency);
+                                        formatAuthorizedAgencies(agencyNames);
 
                                     return (
                                         <div
-                                            key={row.id}
-                                            className={`grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr_1fr_1fr] gap-[30px] items-center px-[14px] py-[12px] ${idx !== paginatedRows.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
+                                            key={row._id}
+                                            className={`grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr_1fr_1fr] gap-[30px] items-center px-[14px] py-[12px] ${idx !== projects.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
                                         >
                                             <div className="flex items-center gap-[10px] min-w-0">
                                                 <div className="h-[40px] w-[40px] shrink-0 overflow-hidden rounded-[12px] bg-[#F5F5F5]">
-                                                    <img src={row.image} alt="" className="h-full w-full object-cover rounded-[8px]" />
+                                                    <img
+                                                        src={resolveProjectImageSrc(row.images, projectImgBaseUrl)}
+                                                        alt=""
+                                                        className="h-full w-full object-cover rounded-[8px]"
+                                                    />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-[12px] font-[SemiBold] text-[#222] leading-[1.2] mb-[4px] truncate">{row.name}</p>
+                                                    <p className="text-[12px] font-[SemiBold] text-[#222] leading-[1.2] mb-[4px] truncate">
+                                                        {row.projectName || "—"}
+                                                    </p>
                                                     <p className="text-[12px] text-[#707070] leading-[1.2] flex items-center gap-[5px] min-w-0">
                                                         <span className="inline-flex shrink-0">
                                                             <LocationIcon width={11} height={15} />
                                                         </span>
-                                                        <span className="truncate">{row.location}</span>
+                                                        <span className="truncate">{formatProjectLocation(row)}</span>
                                                     </p>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-[10px]">
-                                                <img src={row.agentImg} alt="img" className="w-[40px] h-[40px] rounded-[12px] object-cover border border-[rgba(34,34,34,0.08)]" />
-                                                <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.agentname}</p>
+                                                <img
+                                                    src={resolveProfileSrc(
+                                                        row.developer?.profilePicture,
+                                                        developerImgBaseUrl
+                                                    )}
+                                                    alt=""
+                                                    className="w-[40px] h-[40px] rounded-[12px] object-cover border border-[rgba(34,34,34,0.08)]"
+                                                />
+                                                <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                                                    {row.developer?.name || "—"}
+                                                </p>
                                             </div>
                                             <div className="flex items-center gap-[6px] flex-wrap min-w-0">
                                                 {visibleAgencies.map((agency) => (
                                                     <span
-                                                        key={`${row.id}-${agency}`}
+                                                        key={`${row._id}-${agency}`}
                                                         className="inline-flex items-center rounded-[4px] h-[20px] px-[7px] text-[12px] font-[SemiBold] border border-[rgba(34,34,34,0.10)] text-[#222] shrink-0"
                                                     >
                                                         {agency}
@@ -776,21 +896,40 @@ function ListingProject() {
                                                 )}
                                             </div>
 
-                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.price}</p>
-                                            <p className="text-[12px] font-[Regular] text-[#222] truncate"><PropertyStatusBadge status={row.status} /></p>
-                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.publishedAt}</p>
+                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                                                {row.priceLabel || "—"}
+                                            </p>
+                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                                                <PropertyStatusBadge status={row.status} />
+                                            </p>
+                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                                                {formatPublishedAt(row.publishedAt)}
+                                            </p>
                                             <div className="flex items-center justify-start gap-[10px]">
-                                                <button onClick={() => navigate(`/listingprojectdetail`)} type="button" className="cursor-pointer p-[6px] " aria-label="View">
-                                                    <EditIcon width={20} height={20} />
+                                                <button
+                                                    onClick={() =>
+                                                        navigate(`/listingprojectdetail?id=${row._id}`)
+                                                    }
+                                                    type="button"
+                                                    className="cursor-pointer p-[6px]"
+                                                    aria-label="View"
+                                                >
+                                                    <EyeDarkIcon width={20} height={20} />
                                                 </button>
-                                                <button type="button" className="cursor-pointer p-[6px] " aria-label="Delete">
+                                                <button
+                                                    type="button"
+                                                    className="cursor-pointer p-[6px]"
+                                                    aria-label="Delete"
+                                                    onClick={() => handleDeleteProject(row)}
+                                                >
                                                     <TrashIcon width={20} height={20} />
                                                 </button>
                                             </div>
                                         </div>
                                     );
                                 })}
-                            </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -798,8 +937,8 @@ function ListingProject() {
                 {/* Pagenation */}
                 <Pagenation
                     currentPage={currentPage}
-                    totalItems={filteredRows.length}
-                    itemsPerPage={itemsPerPage}
+                    totalItems={totalProjects}
+                    itemsPerPage={ITEMS_PER_PAGE}
                     onPageChange={setCurrentPage}
                 />
             </div>

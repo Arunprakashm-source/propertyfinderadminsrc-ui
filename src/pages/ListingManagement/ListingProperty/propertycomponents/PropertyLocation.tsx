@@ -1,6 +1,7 @@
 import { MarkerIcon, SearchIcon } from "../../../../assets/icons";
 import { useEffect, useRef, useState } from "react";
-import { Autocomplete, GoogleMap, useJsApiLoader } from "@react-google-maps/api";
+import { Autocomplete, GoogleMap } from "@react-google-maps/api";
+import { getGoogleMapsApiKey, useGoogleMapsLoader } from "../../../../hooks/useGoogleMapsLoader";
 
 type PropertyLocationProps = {
     zone: string;
@@ -67,12 +68,8 @@ const PropertyLocation = ({
     onCityChange,
     onFullAddressChange,
 }: PropertyLocationProps) => {
-    const googleMapsApiKey = String(import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "");
-    const { isLoaded } = useJsApiLoader({
-        id: "admin-property-location-map",
-        googleMapsApiKey,
-        libraries: ["places"],
-    });
+    const googleMapsApiKey = getGoogleMapsApiKey();
+    const { isLoaded } = useGoogleMapsLoader();
 
     const [searchAutocomplete, setSearchAutocomplete] = useState<AutocompleteInstance | null>(null);
     const [searchLocation, setSearchLocation] = useState(fullAddress || `${zone}, ${city}`.trim() || "");

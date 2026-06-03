@@ -1,44 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import {
-    CalenderIcon,
-    LeftArrowIcon,
-    PlusIcon,
-    RightArrowIcon,
-    TrashIcon,
-} from "../../../../assets/icons";
-
-const weekDays = ["S", "M", "T", "W", "T", "F", "S"];
-
-const formatDisplayDate = (date: Date) =>
-    date.toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-    });
-
-const monthTitle = (date: Date) =>
-    `${date.toLocaleString("en-US", { month: "long" })}(${date.getFullYear()})`;
-
-const getCalendarCells = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDayIndex = new Date(year, month, 1).getDay();
-    const totalDays = new Date(year, month + 1, 0).getDate();
-    const cells: Array<number | null> = [];
-
-    for (let i = 0; i < firstDayIndex; i += 1) cells.push(null);
-    for (let day = 1; day <= totalDays; day += 1) cells.push(day);
-    while (cells.length < 42) cells.push(null);
-    return cells;
-};
-
-const parseDateString = (dateStr: string): Date => {
-    if (!dateStr.trim()) return new Date();
-    const parsed = new Date(dateStr);
-    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
-};
-
-type ActiveInstallmentPicker = { optionId: number; installmentId: number } | null;
+import { useEffect, useMemo, useState } from "react";
+import { CalenderIcon, PlusIcon, TrashIcon } from "../../../../assets/icons";
+import { projectsService } from "../../../../services/projectsService";
+import { useToast } from "../../../../context/ToastContext";
+import { createToastNotify } from "../../../../utils/toastNotify";
 
 type ConstructionInstallment = {
     id: number;
@@ -48,37 +12,105 @@ type ConstructionInstallment = {
 
 type PaymentOption = {
     id: number;
+    planName: string;
     downPayment: string;
     duringConstruction: string;
     constructionInstallments: ConstructionInstallment[];
     handoverValue: string;
 };
 
-const EditPricePay = () => {
-    const [activeDatePicker, setActiveDatePicker] = useState<ActiveInstallmentPicker>(null);
-    const [displayMonth, setDisplayMonth] = useState(() => new Date());
-    const datePickerRef = useRef<HTMLDivElement>(null);
+type EditPricePayProps = {
+    projectId: string;
+    project: Record<string, unknown>;
+    onContinue?: () => void;
+    primaryActionLabel?: string;
+};
 
-    const [paymentOptions, setPaymentOptions] = useState<PaymentOption[]>([
-        {
-            id: 1,
-            downPayment: "",
-            duringConstruction: "",
-            constructionInstallments: [],
-            handoverValue: "",
-        },
-    ]);
+type FormState = {
+    projectPrice: string;
+    governmentFees: string;
+    paymentOptions: PaymentOption[];
+};
+
+const toNumber = (value: string) => {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : NaN;
+};
+
+const toStringValue = (value: unknown) => {
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+    if (typeof value === "string") return value;
+    return "";
+};
+
+const toFormState = (project: Record<string, unknown>): FormState => {
+    const launchPrice = (project.launchPrice || {}) as Record<string, unknown>;
+    const paymentPlans = Array.isArray(project.paymentPlans)
+        ? (project.paymentPlans as Array<Record<string, unknown>>)
+        : [];
+
+    const mappedOptions: PaymentOption[] = paymentPlans.map((plan, index) => {
+        const downPayment = (plan.downPayment || {}) as Record<string, unknown>;
+        const duringConstruction = (plan.duringConstruction || {}) as Record<string, unknown>;
+        const onHandover = (plan.onHandover || {}) as Record<string, unknown>;
+        const installments = Array.isArray(duringConstruction.installments)
+            ? (duringConstruction.installments as Array<Record<string, unknown>>)
+            : [];
+
+        return {
+            id: index + 1,
+            planName: toStringValue(plan.planName) || `Option ${index + 1}`,
+            downPayment: toStringValue(downPayment.percentage),
+            duringConstruction: toStringValue(duringConstruction.percentage),
+            constructionInstallments: installments.map((item, itemIndex) => ({
+                id: itemIndex + 1,
+                percentage: toStringValue(item.percentage),
+                date: toStringValue(item.date).slice(0, 10),
+            })),
+            handoverValue: toStringValue(onHandover.percentage),
+        };
+    });
+
+    return {
+        projectPrice: toStringValue(launchPrice.startingFrom),
+        governmentFees: toStringValue(project.governmentFees),
+        paymentOptions: mappedOptions.length
+            ? mappedOptions
+            : [
+                {
+                    id: 1,
+                    planName: "Option 1",
+                    downPayment: "",
+                    duringConstruction: "",
+                    constructionInstallments: [],
+                    handoverValue: "",
+                },
+            ],
+    };
+};
+
+const EditPricePay = ({ projectId, project, onContinue, primaryActionLabel = "Save changes" }: EditPricePayProps) => {
+    const { push } = useToast();
+    const toast = createToastNotify(push);
+    const initialState = useMemo(() => toFormState(project), [project]);
+    const [form, setForm] = useState<FormState>(initialState);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        setForm(initialState);
+    }, [initialState]);
 
     const updateOptionField = (
         optionId: number,
         field: "downPayment" | "duringConstruction" | "handoverValue",
         value: string
     ) => {
-        setPaymentOptions((prev) =>
-            prev.map((option) =>
+        setForm((prev) => ({
+            ...prev,
+            paymentOptions: prev.paymentOptions.map((option) =>
                 option.id === optionId ? { ...option, [field]: value } : option
-            )
-        );
+            ),
+        }));
     };
 
     const updateConstructionInstallment = (
@@ -87,8 +119,9 @@ const EditPricePay = () => {
         field: "percentage" | "date",
         value: string
     ) => {
-        setPaymentOptions((prev) =>
-            prev.map((option) => {
+        setForm((prev) => ({
+            ...prev,
+            paymentOptions: prev.paymentOptions.map((option) => {
                 if (option.id !== optionId) return option;
                 return {
                     ...option,
@@ -96,13 +129,14 @@ const EditPricePay = () => {
                         item.id === installmentId ? { ...item, [field]: value } : item
                     ),
                 };
-            })
-        );
+            }),
+        }));
     };
 
     const addInstallment = (optionId: number) => {
-        setPaymentOptions((prev) =>
-            prev.map((option) => {
+        setForm((prev) => ({
+            ...prev,
+            paymentOptions: prev.paymentOptions.map((option) => {
                 if (option.id !== optionId) return option;
                 return {
                     ...option,
@@ -111,13 +145,14 @@ const EditPricePay = () => {
                         { id: option.constructionInstallments.length + 1, percentage: "", date: "" },
                     ],
                 };
-            })
-        );
+            }),
+        }));
     };
 
     const deleteInstallment = (optionId: number, installmentId: number) => {
-        setPaymentOptions((prev) =>
-            prev.map((option) => {
+        setForm((prev) => ({
+            ...prev,
+            paymentOptions: prev.paymentOptions.map((option) => {
                 if (option.id !== optionId) return option;
                 return {
                     ...option,
@@ -125,154 +160,102 @@ const EditPricePay = () => {
                         (item) => item.id !== installmentId
                     ),
                 };
-            })
-        );
+            }),
+        }));
     };
 
     const addPaymentOption = () => {
-        setPaymentOptions((prev) => [
+        setForm((prev) => ({
             ...prev,
-            {
-                id: prev.length + 1,
-                downPayment: "",
-                duringConstruction: "",
-                constructionInstallments: [],
-                handoverValue: "",
-            },
-        ]);
+            paymentOptions: [
+                ...prev.paymentOptions,
+                {
+                    id: prev.paymentOptions.length + 1,
+                    planName: `Option ${prev.paymentOptions.length + 1}`,
+                    downPayment: "",
+                    duringConstruction: "",
+                    constructionInstallments: [],
+                    handoverValue: "",
+                },
+            ],
+        }));
     };
 
     const deletePaymentOption = (optionId: number) => {
-        setPaymentOptions((prev) => prev.filter((option) => option.id !== optionId));
+        setForm((prev) => ({
+            ...prev,
+            paymentOptions: prev.paymentOptions.filter((option) => option.id !== optionId),
+        }));
     };
 
-    const calendarCells = getCalendarCells(displayMonth);
-
-    const shiftMonth = (direction: -1 | 1) => {
-        setDisplayMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + direction, 1));
+    const onDiscard = () => {
+        setForm(initialState);
     };
 
-    const isPickerActive = (optionId: number, installmentId: number) =>
-        activeDatePicker?.optionId === optionId && activeDatePicker?.installmentId === installmentId;
+    const onSave = async () => {
+        const projectPrice = toNumber(form.projectPrice);
+        const governmentFees = toNumber(form.governmentFees);
+        if (!(projectPrice > 0)) {
+            toast.error("Validation required", "Project price must be a positive number.");
+            return;
+        }
+        if (!(governmentFees >= 0)) {
+            toast.error("Validation required", "Government fees must be zero or more.");
+            return;
+        }
+        if (form.paymentOptions.length < 1) {
+            toast.error("Validation required", "At least one payment plan is required.");
+            return;
+        }
 
-    const openDatePicker = (optionId: number, installmentId: number, currentDateStr: string) => {
-        const isActive = isPickerActive(optionId, installmentId);
-        setActiveDatePicker(isActive ? null : { optionId, installmentId });
-        if (!isActive) {
-            const sourceDate = parseDateString(currentDateStr);
-            setDisplayMonth(new Date(sourceDate.getFullYear(), sourceDate.getMonth(), 1));
+        const payloadPaymentPlans = form.paymentOptions.map((option, index) => {
+            const down = toNumber(option.downPayment);
+            const during = toNumber(option.duringConstruction);
+            const handover = toNumber(option.handoverValue);
+            const total = down + during + handover;
+            if (
+                !(down >= 0) ||
+                !(during >= 0) ||
+                !(handover >= 0) ||
+                Math.abs(total - 100) > 0.01
+            ) {
+                throw new Error(`Payment percentages for option ${index + 1} must sum to 100.`);
+            }
+            return {
+                planName: option.planName || `Option ${index + 1}`,
+                downPayment: { percentage: down },
+                duringConstruction: {
+                    percentage: during,
+                    installments: option.constructionInstallments.map((item) => ({
+                        percentage: toNumber(item.percentage) || 0,
+                        date: item.date,
+                    })),
+                },
+                onHandover: { percentage: handover },
+            };
+        });
+
+        setIsSaving(true);
+        try {
+            await projectsService.updateProject(projectId, {
+                launchPrice: {
+                    startingFrom: projectPrice,
+                    currency: "AED",
+                },
+                governmentFees,
+                paymentPlans: payloadPaymentPlans,
+            });
+            toast.success("Price updated", "Price and payment plan updated successfully.");
+            onContinue?.();
+        } catch (error: unknown) {
+            const message =
+                (error as { message?: string })?.message || "Failed to update price and payment plan.";
+            toast.error("Update failed", message);
+        } finally {
+            setIsSaving(false);
         }
     };
 
-    const selectInstallmentDate = (optionId: number, installmentId: number, day: number) => {
-        const selectedDate = new Date(displayMonth.getFullYear(), displayMonth.getMonth(), day);
-        updateConstructionInstallment(
-            optionId,
-            installmentId,
-            "date",
-            formatDisplayDate(selectedDate)
-        );
-        setActiveDatePicker(null);
-    };
-
-    useEffect(() => {
-        if (!activeDatePicker) return;
-        const onDocMouseDown = (e: MouseEvent) => {
-            if (datePickerRef.current?.contains(e.target as Node)) return;
-            setActiveDatePicker(null);
-        };
-        document.addEventListener("mousedown", onDocMouseDown);
-        return () => document.removeEventListener("mousedown", onDocMouseDown);
-    }, [activeDatePicker]);
-
-    const renderInstallmentDatePicker = (
-        optionId: number,
-        installmentId: number,
-        dateValue: string
-    ) => {
-        const selectedDate = parseDateString(dateValue);
-        const pickerKey = `${optionId}-${installmentId}`;
-        const isActive = isPickerActive(optionId, installmentId);
-
-        return (
-            <div className="relative w-full" ref={isActive ? datePickerRef : undefined}>
-                <input
-                    type="text"
-                    readOnly
-                    value={dateValue}
-                    onClick={() => openDatePicker(optionId, installmentId, dateValue)}
-                    placeholder="Select"
-                    className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white px-[10px] pr-[36px] text-[13px] font-[Medium] text-[#222] placeholder:text-[#707070] placeholder:text-[13px] placeholder:font-[Medium] focus:outline-none cursor-pointer"
-                />
-                <button
-                    type="button"
-                    aria-label="Open calendar"
-                    onClick={() => openDatePicker(optionId, installmentId, dateValue)}
-                    className="absolute right-[8px] top-1/2 -translate-y-1/2 cursor-pointer p-[4px]"
-                >
-                    <CalenderIcon width={14} height={14} />
-                </button>
-                {isActive && (
-                    <div className="absolute md:right-0 right-0 top-[48px] z-30 h-[320px] w-[280px] rounded-[12px] bg-white p-[20px] shadow-[0_8px_20px_rgba(0,0,0,0.12)]">
-                        <div className="flex items-center justify-between mb-[16px]">
-                            <button
-                                type="button"
-                                onClick={() => shiftMonth(-1)}
-                                className="text-[16px] font-[SemiBold] text-[#222] px-[6px] rotate-180"
-                            >
-                                <LeftArrowIcon width={14} height={14} />
-                            </button>
-                            <p className="text-[16px] font-[Bold] text-[#222]">{monthTitle(displayMonth)}</p>
-                            <button
-                                type="button"
-                                onClick={() => shiftMonth(1)}
-                                className="text-[16px] font-[SemiBold] text-[#222] px-[6px]"
-                            >
-                                <RightArrowIcon width={14} height={14} />
-                            </button>
-                        </div>
-                        <div className="grid grid-cols-7 gap-y-[6px] text-center">
-                            {weekDays.map((d, index) => (
-                                <span
-                                    key={`${pickerKey}-day-${d}-${index}`}
-                                    className="text-[13px] font-[SemiBold] text-[#222]"
-                                >
-                                    {d}
-                                </span>
-                            ))}
-                            {calendarCells.map((day, idx) => {
-                                if (!day) {
-                                    return (
-                                        <span
-                                            key={`${pickerKey}-blank-${idx}`}
-                                            className="h-[30px] w-[30px] mx-auto rounded-full border border-[rgba(34,34,34,0.10)] bg-[#FAFAFA]"
-                                        />
-                                    );
-                                }
-                                const isSelected =
-                                    selectedDate.getDate() === day &&
-                                    selectedDate.getMonth() === displayMonth.getMonth() &&
-                                    selectedDate.getFullYear() === displayMonth.getFullYear();
-                                return (
-                                    <button
-                                        key={`${pickerKey}-${day}-${idx}`}
-                                        type="button"
-                                        onClick={() => selectInstallmentDate(optionId, installmentId, day)}
-                                        className={`h-[30px] w-[30px] mx-auto rounded-full text-[12px] font-[SemiBold] border transition-colors ${isSelected
-                                            ? "bg-[#EA3934] text-white border-[#EA3934]"
-                                            : "text-[#707070] border-[rgba(34,34,34,0.10)] hover:bg-[#F2F2F2]"
-                                            }`}
-                                    >
-                                        {day}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-            </div>
-        );
-    };
     return (
         <div>
             {/* project price */}
@@ -286,6 +269,10 @@ const EditPricePay = () => {
                         <input
                             type="text"
                             placeholder="Enter the property price"
+                            value={form.projectPrice}
+                            onChange={(event) =>
+                                setForm((prev) => ({ ...prev, projectPrice: event.target.value }))
+                            }
                             className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] text-[13px] text-[#222] focus:outline-none"
                         />
                     </div>
@@ -296,6 +283,10 @@ const EditPricePay = () => {
                         <input
                             type="text"
                             placeholder="Government Fees"
+                            value={form.governmentFees}
+                            onChange={(event) =>
+                                setForm((prev) => ({ ...prev, governmentFees: event.target.value }))
+                            }
                             className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] text-[13px] text-[#222] focus:outline-none"
                         />
                     </div>
@@ -307,7 +298,7 @@ const EditPricePay = () => {
                 <h3 className="text-[20px] font-[Bold] text-[#222] mb-[14px]">Payment Plan</h3>
 
                 <div className="flex flex-col gap-[12px]">
-                    {paymentOptions.map((option) => (
+                    {form.paymentOptions.map((option) => (
                         <div key={option.id} className="">
                             <div className="flex items-center justify-between gap-3 mb-[10px]">
                                 <p className="text-[14px] font-[Regular] text-[#222]">Option {option.id}</p>
@@ -383,7 +374,20 @@ const EditPricePay = () => {
                                                             <span className="absolute right-[10px] top-1/2 -translate-y-1/2 text-[12px] text-[#707070] font-[SemiBold]">%</span>
                                                         </div>
                                                         <div className="w-full gap-[8px]">
-                                                            {renderInstallmentDatePicker(option.id, item.id, item.date)}
+                                                            <div className="relative">
+                                                                <input
+                                                                    type="text"
+                                                                    value={item.date}
+                                                                    onChange={(e) =>
+                                                                        updateConstructionInstallment(option.id, item.id, "date", e.target.value)
+                                                                    }
+                                                                    placeholder="Select"
+                                                                    className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white px-[10px] pr-[24px] text-[13px] font-[Medium] text-[#222] placeholder:text-[#707070] placeholder:text-[13px] placeholder:font-[Medium] focus:outline-none"
+                                                                />
+                                                                <span className="absolute right-[8px] top-1/2 -translate-y-1/2">
+                                                                    <CalenderIcon width={14} height={14} />
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                         <button
                                                             type="button"
@@ -444,8 +448,21 @@ const EditPricePay = () => {
                 </button>
             </div>
             <div className="flex items-center justify-end gap-[10px] mt-[30px]">
-                <button className="cursor-pointer h-[44px] rounded-[10px] px-[20px] border border-[#222]  text-[#222] text-[14px] font-[Bold] inline-flex items-center gap-[5px]">Discard</button>
-                <button className="cursor-pointer h-[44px] rounded-[10px] px-[20px] bg-[#6A3CA8] text-[#FFF] text-[14px] font-[Bold] inline-flex items-center gap-[5px]">Save changes</button>
+                <button
+                    type="button"
+                    onClick={onDiscard}
+                    className="cursor-pointer h-[44px] rounded-[10px] px-[20px] border border-[#222]  text-[#222] text-[14px] font-[Bold] inline-flex items-center gap-[5px]"
+                >
+                    Discard
+                </button>
+                <button
+                    type="button"
+                    onClick={onSave}
+                    disabled={isSaving}
+                    className={`h-[44px] rounded-[10px] px-[20px] text-[14px] font-[Bold] inline-flex items-center gap-[5px] ${isSaving ? "bg-[#EA3934]/50 text-[#FFF] cursor-not-allowed" : "bg-[#EA3934] text-[#FFF] cursor-pointer"}`}
+                >
+                    {isSaving ? "Saving..." : primaryActionLabel}
+                </button>
             </div>
         </div>
     );

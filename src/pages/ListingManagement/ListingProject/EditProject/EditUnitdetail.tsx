@@ -1,411 +1,391 @@
-import { DownArrowIcon, PlusIcon, TrashIcon, GalleryIcon } from "../../../../assets/icons";
-import { useState } from "react";
-type Layout = {
-    id: number;
-    isOpen: boolean;
+import { useCallback, useEffect, useMemo, useState } from "react";
+import UnitDetails from "../AddProject/AddProjectComponents/UnitDetails";
+import type {
+    UnitDetailsFormValue,
+    UnitPropertyTypeOption,
+} from "../AddProject/AddProjectComponents/UnitDetails";
+import {
+    projectsService,
+    type PropertyTypeMasterItem,
+    type SupportedUrlsMasterData,
+} from "../../../../services/projectsService";
+import { API_BASE_URL } from "../../../../services/apiClient";
+import { useToast } from "../../../../context/ToastContext";
+import { createToastNotify } from "../../../../utils/toastNotify";
+
+type EditUnitdetailProps = {
+    projectId: string;
+    unitProperties: Array<Record<string, unknown>>;
+    onAfterSave: () => Promise<void>;
+    primaryActionLabel?: string;
 };
 
-type Property = {
-    id: number;
-    isOpen: boolean;
-    layouts: Layout[];
+const isObjectId = (value: string) => /^[a-fA-F0-9]{24}$/.test(value);
+
+const toNumber = (value: string) => {
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) ? parsed : NaN;
 };
 
+const extractFilename = (value?: string | null) => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    return trimmed.includes("/") ? trimmed.split("/").pop() || null : trimmed;
+};
 
-const EditUnitdetail = () => {
-    const [properties, setProperties] = useState<Property[]>([]);
+const extractProjectImgBase = (data: SupportedUrlsMasterData): string | null => {
+    const candidates: Array<Record<string, unknown> | undefined> = [];
+    if (data.supportedUrls && typeof data.supportedUrls === "object") {
+        candidates.push(data.supportedUrls);
+    }
+    if (data.supportedurls && typeof data.supportedurls === "object") {
+        candidates.push(data.supportedurls);
+    }
+    if (data.items && !Array.isArray(data.items) && typeof data.items === "object") {
+        candidates.push(data.items);
+    }
+    if (Array.isArray(data.items)) {
+        data.items.forEach((item) => {
+            if (item && typeof item === "object") candidates.push(item);
+        });
+    }
 
-    //default open property
-    // const [properties, setProperties] = useState<Property[]>([
-    //     {
-    //         id: 1,
-    //         isOpen: true,
-    //         layouts: [
-    //             {
-    //                 id: 1,
-    //                 isOpen: true
-    //             }
-    //         ]
-    //     }
-    // ]);
-    const [openPropertyTypeDropdownId, setOpenPropertyTypeDropdownId] = useState<number | null>(null);
-    const [selectedPropertyTypeById, setSelectedPropertyTypeById] = useState<Record<number, string>>({});
-    const [layoutImageByKey, setLayoutImageByKey] = useState<Record<string, string>>({});
-    const propertyTypeOptions = ["Apartment", "Villa", "Townhouse", "Duplex", "Penthouse"];
-    const getLayoutKey = (propertyId: number, layoutId: number) => `${propertyId}-${layoutId}`;
-    const addProperty = () => {
-        setProperties((prev) => [
-            ...prev,
-            {
-                id: prev.length + 1,
+    for (const candidate of candidates) {
+        const projectUrl = candidate?.projectUrl;
+        if (projectUrl && typeof projectUrl === "object") {
+            const img = (projectUrl as Record<string, unknown>).img;
+            if (typeof img === "string" && img.trim()) return img;
+        }
+    }
+
+    return null;
+};
+
+const toLayoutPriceString = (startingPrice: unknown): string => {
+    if (!startingPrice || typeof startingPrice !== "object") return "";
+    const amount = (startingPrice as { amount?: unknown }).amount;
+    if (typeof amount === "number" && Number.isFinite(amount)) return String(amount);
+    return "";
+};
+
+const mapUnitPropertiesToForm = (rows: Array<Record<string, unknown>>): UnitDetailsFormValue => {
+    let nextPropertyId = 1;
+    const properties = rows.map((row) => {
+        const propertyId = nextPropertyId++;
+        const layoutsRaw = Array.isArray(row.layouts) ? row.layouts : [];
+        let nextLayoutId = 1;
+        const layouts = layoutsRaw.map((lay) => {
+            const layout = lay as Record<string, unknown>;
+            const layoutId = nextLayoutId++;
+            const floorPlans = Array.isArray(layout.floorPlans)
+                ? (layout.floorPlans as unknown[]).map((x) => String(x)).filter(Boolean)
+                : [];
+            return {
+                id: layoutId,
                 isOpen: true,
-                layouts: []
+                layoutName: String(layout.layoutName ?? ""),
+                areaSqm: String(layout.areaSqm ?? ""),
+                areaSqft: String(layout.areaSqft ?? ""),
+                bedrooms: String(layout.bedrooms ?? ""),
+                hasMaidBedroom: Boolean(layout.maidBedroom),
+                bathrooms: String(layout.bathrooms ?? ""),
+                totalUnits: String(layout.totalUnits ?? ""),
+                layoutPrice: toLayoutPriceString(layout.startingPrice),
+                floorPlanImage: null,
+                layoutMongoId: layout._id ? String(layout._id) : undefined,
+                existingFloorPlanFilenames: floorPlans.length ? floorPlans : undefined,
+            };
+        });
+        return {
+            id: propertyId,
+            isOpen: true,
+            towerName: String(row.buildingName ?? ""),
+            propertyType: row.propertyType ? String(row.propertyType) : "",
+            areaSqm: String(row.areaSqm ?? ""),
+            areaSqft: String(row.areaSqft ?? ""),
+            layouts,
+            buildingMongoId: row._id ? String(row._id) : undefined,
+        };
+    });
+    return { properties };
+};
+
+const validateUnitForm = (value: UnitDetailsFormValue): string | null => {
+    if (value.properties.length < 1) {
+        return "Add at least one property with layouts.";
+    }
+    for (const property of value.properties) {
+        const propertyAreaSqm = toNumber(property.areaSqm);
+        const propertyAreaSqft = toNumber(property.areaSqft);
+        if (
+            !property.propertyType.trim() ||
+            !isObjectId(property.propertyType.trim()) ||
+            !(propertyAreaSqm > 0) ||
+            !(propertyAreaSqft > 0)
+        ) {
+            return "Each property needs a valid property type and positive area (sq.m and sq.ft).";
+        }
+        if (property.layouts.length < 1) {
+            return "Each property needs at least one layout.";
+        }
+        for (const layout of property.layouts) {
+            const layoutAreaSqm = toNumber(layout.areaSqm);
+            const layoutAreaSqft = toNumber(layout.areaSqft);
+            const bedrooms = toNumber(layout.bedrooms);
+            const bathrooms = toNumber(layout.bathrooms);
+            const totalUnits = toNumber(layout.totalUnits);
+            const layoutPrice = toNumber(layout.layoutPrice);
+            const hasFloorPlan =
+                Boolean(layout.floorPlanImage) ||
+                Boolean(layout.existingFloorPlanFilenames && layout.existingFloorPlanFilenames.length > 0);
+            if (!layout.layoutName.trim()) {
+                return "Each layout needs a name.";
             }
-        ]);
+            if (!(layoutAreaSqm > 0) || !(layoutAreaSqft > 0)) {
+                return "Each layout needs positive size (sq.m and sq.ft).";
+            }
+            if (!(bedrooms >= 0) || !(bathrooms >= 0)) {
+                return "Bedrooms and bathrooms must be valid numbers (0 or more).";
+            }
+            if (!layout.layoutMongoId && !(totalUnits >= 1)) {
+                return "New layouts require at least one unit.";
+            }
+            if (!(layoutPrice > 0)) {
+                return "Each layout needs a positive starting price.";
+            }
+            if (!hasFloorPlan) {
+                return "Each layout needs a floor plan image.";
+            }
+        }
+    }
+    return null;
+};
+
+const buildPropertiesPayload = (
+    value: UnitDetailsFormValue,
+    floorPlanFilenameByKey: Record<string, string>
+): Array<Record<string, unknown>> => {
+    return value.properties.map((property) => {
+        const body: Record<string, unknown> = {
+            propertyType: property.propertyType.trim(),
+            areaSqm: toNumber(property.areaSqm),
+            areaSqft: toNumber(property.areaSqft),
+            layouts: property.layouts.map((layout) => {
+                const key = `${property.id}-${layout.id}`;
+                const uploaded = floorPlanFilenameByKey[key];
+                const existing = (layout.existingFloorPlanFilenames || [])
+                    .map((f) => extractFilename(f))
+                    .filter((name): name is string => Boolean(name));
+                const floorPlans = uploaded ? [uploaded] : existing;
+
+                const layoutBody: Record<string, unknown> = {
+                    layoutName: layout.layoutName.trim(),
+                    areaSqm: toNumber(layout.areaSqm),
+                    areaSqft: toNumber(layout.areaSqft),
+                    bedrooms: toNumber(layout.bedrooms),
+                    maidBedroom: layout.hasMaidBedroom,
+                    bathrooms: toNumber(layout.bathrooms),
+                    floorPlans,
+                };
+                const price = toNumber(layout.layoutPrice);
+                layoutBody.startingPrice =
+                    Number.isFinite(price) && price > 0 ? { amount: price, currency: "AED" } : null;
+
+                if (layout.layoutMongoId) {
+                    layoutBody._id = layout.layoutMongoId;
+                } else {
+                    layoutBody.totalUnits = toNumber(layout.totalUnits);
+                }
+                return layoutBody;
+            }),
+        };
+
+        if (property.buildingMongoId) {
+            body._id = property.buildingMongoId;
+        }
+        const tower = property.towerName.trim();
+        if (tower) {
+            body.buildingName = tower;
+        }
+        return body;
+    });
+};
+
+const EditUnitdetail = ({ projectId, unitProperties, onAfterSave, primaryActionLabel = "Save changes" }: EditUnitdetailProps) => {
+    const { push } = useToast();
+    const toast = createToastNotify(push);
+    const initialForm = useMemo(() => mapUnitPropertiesToForm(unitProperties), [unitProperties]);
+    const [form, setForm] = useState<UnitDetailsFormValue>(initialForm);
+    const [propertyTypeOptions, setPropertyTypeOptions] = useState<UnitPropertyTypeOption[]>([]);
+    const [floorPlanBaseUrl, setFloorPlanBaseUrl] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const fallbackImageBase = useMemo(() => {
+        const origin = API_BASE_URL.replace(/\/api\/?$/, "");
+        return `${origin}/uploads/img/project/`;
+    }, []);
+
+    useEffect(() => {
+        setForm(initialForm);
+    }, [initialForm]);
+
+    useEffect(() => {
+        let isMounted = true;
+        projectsService
+            .listPropertyTypesMaster()
+            .then((data) => {
+                if (!isMounted) return;
+                const propertyTypes = (Array.isArray(data) ? data : data.propertyTypes || data.propertytypes || [])
+                    .filter(
+                        (item: PropertyTypeMasterItem) =>
+                            Boolean(item?._id && item?.name) && item.isActive !== false
+                    )
+                    .sort((a: PropertyTypeMasterItem, b: PropertyTypeMasterItem) => {
+                        const orderA =
+                            typeof a.displayOrder === "number" ? a.displayOrder : Number.MAX_SAFE_INTEGER;
+                        const orderB =
+                            typeof b.displayOrder === "number" ? b.displayOrder : Number.MAX_SAFE_INTEGER;
+                        return orderA - orderB;
+                    })
+                    .map((item: PropertyTypeMasterItem) => ({
+                        id: String(item._id),
+                        name: item.name.trim(),
+                    }))
+                    .filter(
+                        (item, index, arr) =>
+                            item.name.length > 0 &&
+                            isObjectId(item.id) &&
+                            arr.findIndex((current) => current.id === item.id) === index
+                    );
+                setPropertyTypeOptions(propertyTypes);
+            })
+            .catch((error: unknown) => {
+                const message =
+                    (error as { message?: string })?.message || "Unable to load property type options.";
+                toast.error("Master data load failed", message);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+        projectsService
+            .getSupportedUrls()
+            .then((data) => {
+                if (!isMounted) return;
+                const resolved = extractProjectImgBase(data);
+                setFloorPlanBaseUrl((resolved || fallbackImageBase).replace(/\/?$/, "/"));
+            })
+            .catch(() => {
+                if (!isMounted) return;
+                setFloorPlanBaseUrl(fallbackImageBase.replace(/\/?$/, "/"));
+            });
+        return () => {
+            isMounted = false;
+        };
+    }, [fallbackImageBase]);
+
+    const resolveFloorPlanSrc = useCallback(
+        (filename: string) => {
+            const name = extractFilename(filename);
+            if (!name || !floorPlanBaseUrl) return null;
+            return `${floorPlanBaseUrl}${encodeURIComponent(name).replace(/%2F/g, "/")}`;
+        },
+        [floorPlanBaseUrl]
+    );
+
+    const handleDiscard = () => {
+        setForm(initialForm);
     };
-    const toggleProperty = (propertyId: number) => {
-        setProperties((prev) =>
-            prev.map((property) =>
-                property.id === propertyId
-                    ? { ...property, isOpen: !property.isOpen }
-                    : property
+
+    const handleSave = async () => {
+        const validationError = validateUnitForm(form);
+        if (validationError) {
+            toast.error("Validation required", validationError);
+            return;
+        }
+
+        const floorPlanFileEntries = form.properties.flatMap((property) =>
+            property.layouts.flatMap((layout) =>
+                layout.floorPlanImage
+                    ? [{ key: `${property.id}-${layout.id}`, file: layout.floorPlanImage }]
+                    : []
             )
         );
-    };
-    const deleteProperty = (propertyId: number) => {
-        setProperties((prev) => prev.filter(p => p.id !== propertyId));
-        setSelectedPropertyTypeById((prev) => {
-            const next = { ...prev };
-            delete next[propertyId];
-            return next;
-        });
-        setOpenPropertyTypeDropdownId((prev) => (prev === propertyId ? null : prev));
-        setLayoutImageByKey((prev) => {
-            const next = { ...prev };
-            Object.keys(next).forEach((key) => {
-                if (key.startsWith(`${propertyId}-`)) {
-                    URL.revokeObjectURL(next[key]);
-                    delete next[key];
-                }
-            });
-            return next;
-        });
-    };
-    const addLayout = (propertyId: number) => {
-        setProperties((prev) =>
-            prev.map((property) => {
-                if (property.id === propertyId) {
-                    return {
-                        ...property,
-                        layouts: [
-                            ...property.layouts,
-                            { id: property.layouts.length + 1, isOpen: true }
-                        ]
-                    };
-                }
-                return property;
-            })
-        );
-    };
-    const toggleLayout = (propertyId: number, layoutId: number) => {
-        setProperties((prev) =>
-            prev.map((property) => {
-                if (property.id === propertyId) {
-                    return {
-                        ...property,
-                        layouts: property.layouts.map((layout) =>
-                            layout.id === layoutId
-                                ? { ...layout, isOpen: !layout.isOpen }
-                                : layout
-                        )
-                    };
-                }
-                return property;
-            })
-        );
-    };
-    const deleteLayout = (propertyId: number, layoutId: number) => {
-        setProperties((prev) =>
-            prev.map((property) => {
-                if (property.id === propertyId) {
-                    return {
-                        ...property,
-                        layouts: property.layouts.filter(l => l.id !== layoutId)
-                    };
-                }
-                return property;
-            })
-        );
-        setLayoutImageByKey((prev) => {
-            const next = { ...prev };
-            const key = getLayoutKey(propertyId, layoutId);
-            if (next[key]) {
-                URL.revokeObjectURL(next[key]);
-                delete next[key];
-            }
-            return next;
-        });
-    };
 
-    const handleLayoutImageChange = (propertyId: number, layoutId: number, file?: File) => {
-        if (!file || !file.type.startsWith("image/")) return;
-        const key = getLayoutKey(propertyId, layoutId);
-        const newUrl = URL.createObjectURL(file);
+        const floorPlanFormData = new FormData();
+        floorPlanFormData.append("projectId", projectId);
+        floorPlanFileEntries.forEach((entry) => floorPlanFormData.append("floorPlans", entry.file));
 
-        setLayoutImageByKey((prev) => {
-            const next = { ...prev };
-            if (next[key]) {
-                URL.revokeObjectURL(next[key]);
+        setIsSaving(true);
+        let floorPlanFilenameByKey: Record<string, string> = {};
+        try {
+            if (floorPlanFileEntries.length > 0) {
+                const floorPlanUploadResponse = await projectsService.uploadProjectMedia(floorPlanFormData);
+                const uploadedFloorPlans = (floorPlanUploadResponse.uploads?.floorPlans || [])
+                    .map((item) => extractFilename(item.filename || item.url))
+                    .filter((name): name is string => Boolean(name));
+
+                if (uploadedFloorPlans.length !== floorPlanFileEntries.length) {
+                    toast.error(
+                        "Floor plan upload failed",
+                        "Some floor plan files failed to upload. Please retry."
+                    );
+                    return;
+                }
+
+                floorPlanFilenameByKey = floorPlanFileEntries.reduce<Record<string, string>>(
+                    (acc, entry, index) => {
+                        acc[entry.key] = uploadedFloorPlans[index];
+                        return acc;
+                    },
+                    {}
+                );
             }
-            next[key] = newUrl;
-            return next;
-        });
+
+            const properties = buildPropertiesPayload(form, floorPlanFilenameByKey);
+            await projectsService.updateProject(projectId, { properties });
+            toast.success("Unit details saved", "Layouts and unit configuration were updated.");
+            await onAfterSave();
+        } catch (error: unknown) {
+            const message = (error as { message?: string })?.message || "Failed to save unit details.";
+            toast.error("Save failed", message);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
         <div>
-            <div className="rounded-b-[15px] bg-white md:p-[30px] p-[16px]">
-                <h3 className="text-[20px] font-[Bold] text-[#222] mb-[30px]">Unit details</h3>
-
-                <div className="flex flex-col gap-[20px]">
-                    {properties.map((property, index) => (
-                        <div
-                            key={property.id}
-                            className=""
-                        >
-                            <div onClick={() => toggleProperty(property.id)} className={`flex items-start justify-between gap-[12px] cursor-pointer ${property.isOpen ? "mb-[0px]" : `pb-[20px] ${index !== properties.length - 1 ? "border-b border-[rgba(34,34,34,0.10)]" : ""} `}`}>
-                                <p className={`text-[14px] font-[Medium] ${property.isOpen ? "text-[#0832AE]" : "text-[#222]"}`}>
-                                    Property Type #{property.id} <span className="text-[#EA3934]">*</span>
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={() => deleteProperty(property.id)}
-                                    className="bg-white flex items-center justify-center cursor-pointer"
-                                >
-                                    <TrashIcon width={20} height={20} fill="#EA3934" />
-                                </button>
-                            </div>
-
-                            {/*property type and layout types details*/}
-                            {property.isOpen && (
-                                <div className="rounded-[15px] bg-[#F5F5F5] md:[20px] p-[15px] mt-[20px]">
-                                    {/*property type overview*/}
-                                    <div>
-                                        <div className=" grid grid-cols-1 md:grid-cols-2 gap-[10px]">
-                                            <div>
-                                                <label className="text-[14px] font-[Medium] text-[#222] block mb-[6px]">
-                                                    Building/Tower Name <span className="text-[#707070] font-[Regular] text-[12px]">(Optional)</span>
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Enter number of baths"
-                                                    className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white px-[12px] text-[13px] text-[#222] placeholder:text-[#A0A0A0] focus:outline-none"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[6px]">Property type</label>
-                                                <div className="relative">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            setOpenPropertyTypeDropdownId((prev) =>
-                                                                prev === property.id ? null : property.id
-                                                            )
-                                                        }
-                                                        className="cursor-pointer h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white px-[12px] text-[13px] flex items-center justify-between"
-                                                    >
-                                                        <span className={selectedPropertyTypeById[property.id] ? "text-[#222]" : "text-[#A0A0A0]"}>
-                                                            {selectedPropertyTypeById[property.id] || "Select property type"}
-                                                        </span>
-                                                        <DownArrowIcon
-                                                            width={10}
-                                                            height={7}
-                                                            className={`transition-transform ${openPropertyTypeDropdownId === property.id ? "rotate-180" : ""
-                                                                }`}
-                                                        />
-                                                    </button>
-                                                    {openPropertyTypeDropdownId === property.id && (
-                                                        <div className="absolute left-0 right-0 top-[48px] z-20 rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white shadow-[0_8px_20px_rgba(0,0,0,0.08)] py-[6px]">
-                                                            {propertyTypeOptions.map((option) => (
-                                                                <button
-                                                                    key={option}
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        setSelectedPropertyTypeById((prev) => ({
-                                                                            ...prev,
-                                                                            [property.id]: option,
-                                                                        }));
-                                                                        setOpenPropertyTypeDropdownId(null);
-                                                                    }}
-                                                                    className="w-full text-left px-[12px] py-[8px] text-[13px] text-[#222] hover:bg-[#F5F5F5]"
-                                                                >
-                                                                    {option}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-[12px]">
-                                            <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[6px]">
-                                                Area of the property <span className="text-[#EA3934]">*</span>
-                                            </label>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-[10px]">
-                                                <div className="relative">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="0,00"
-                                                        className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white px-[12px] pr-[50px] text-[13px] text-[#222] placeholder:text-[#A0A0A0] focus:outline-none"
-                                                    />
-                                                    <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[13px] font-[SemiBold] text-[#707070]">Sq.m</span>
-                                                </div>
-                                                <div className="relative">
-                                                    <input
-                                                        type="text"
-                                                        placeholder="0,00"
-                                                        className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white px-[12px] pr-[50px] text-[13px] text-[#222] placeholder:text-[#A0A0A0] focus:outline-none"
-                                                    />
-                                                    <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[13px] font-[SemiBold] text-[#707070]">Sq.ft</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-[12px] border-t border-[rgba(34,34,34,0.06)] pt-[12px]">
-                                            <div className="flex items-center justify-between gap-3">
-                                                <p className="text-[14px] font-[Bold] text-[#222]">Layout types</p>
-                                                {property.layouts.length < 1 && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => addLayout(property.id)}
-                                                        className="cursor-pointer h-[21px] rounded-[5px] px-[8px] border border-[rgba(8,50,174,0.30)] bg-[rgba(8,50,174,0.10)] text-[#0832AE] text-[12px] font-[SemiBold] inline-flex items-center gap-[5px]"
-                                                    >
-                                                        <PlusIcon width={12} height={12} fill="#0832AE" />
-                                                        Add Layout types
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {/*layout types overview*/}
-                                    {property.layouts.map((layout) => (
-                                        <div key={layout.id} className="mt-[12px] rounded-[15px] bg-[#FFF] md:p-[20px] p-[15px]">
-                                            <div onClick={() => toggleLayout(property.id, layout.id)} className="cursor-pointer flex items-center justify-between">
-                                                <p className={`text-[13px] font-[SemiBold] ${layout.isOpen ? "text-[#0832AE]" : "text-[#222]"}`}>  Layout type #{layout.id}</p>
-                                                <button onClick={() => deleteLayout(property.id, layout.id)} type="button" className="cursor-pointer flex items-center justify-center bg-white">
-                                                    <TrashIcon width={20} height={20} fill="#EA3934" />
-                                                </button>
-                                            </div>
-                                            {/*layout types details*/}
-                                            {layout.isOpen && (
-                                                <div className="mt-[30px]">
-                                                    {/* layout name and size */}
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-[14px] md:mb-[30px] mb-[15px]">
-                                                        <div>
-                                                            <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[10px]">Layout name <span className="text-[#EA3934]">*</span></label>
-                                                            <input type="text" defaultValue="TYPE A -1BHK" className="font-[Regular] h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] text-[13px] text-[#222] focus:outline-none" />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[10px]">Size (sq.ft.) <span className="text-[#EA3934]">*</span></label>
-                                                            <div className="grid grid-cols-2 gap-[10px]">
-                                                                <div className="relative">
-                                                                    <input type="text" defaultValue="147" className="font-[Regular] h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] pr-[56px] text-[13px] text-[#222] focus:outline-none" />
-                                                                    <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[13px] text-[#707070] font-[SemiBold]">Sq.m</span>
-                                                                </div>
-                                                                <div className="relative">
-                                                                    <input type="text" defaultValue="147" className="font-[Regular] h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] pr-[56px] text-[13px] text-[#222] focus:outline-none" />
-                                                                    <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[13px] text-[#707070] font-[SemiBold]">Sq.ft</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    {/* number of bedrooms and maid bedroom is available */}
-                                                    <div className="md:mb-[30px] mb-[15px]">
-                                                        <div>
-                                                            <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[10px]">Number of bedrooms <span className="text-[#EA3934]">*</span></label>
-                                                            <input type="text" defaultValue="2" className="font-[Regular] h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] text-[13px] text-[#222] focus:outline-none" />
-                                                        </div>
-                                                        <label className="inline-flex items-center gap-[8px] mt-[10px] cursor-pointer">
-                                                            <input type="checkbox" className="h-[15px] w-[15px] rounded border border-[rgba(34,34,34,0.20)]" />
-                                                            <span className="text-[12px] text-[#707070] font-[Regular]">Maid bedroom is available</span>
-                                                        </label>
-                                                    </div>
-
-                                                    {/* number of bathrooms and number of units */}
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-[14px] md:mb-[30px] mb-[15px]">
-                                                        <div>
-                                                            <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[10px]">Number of bathrooms <span className="text-[#EA3934]">*</span></label>
-                                                            <input type="text" defaultValue="1" className="font-[Regular] h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] text-[13px] text-[#222] focus:outline-none" />
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[10px]">Number of units <span className="text-[#EA3934]">*</span></label>
-                                                            <input type="text" defaultValue="20" className="font-[Regular] h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] text-[13px] text-[#222] focus:outline-none" />
-                                                        </div>
-                                                    </div>
-
-                                                    {/* layout price */}
-                                                    <div className="">
-                                                        <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[10px]">Layout price <span className="text-[#EA3934]">*</span></label>
-                                                        <div className="relative">
-                                                            <input type="text" defaultValue="2800000" className="h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] pr-[48px] text-[13px] text-[#222] font-[Regular] focus:outline-none" />
-                                                            <span className="absolute right-[12px] top-1/2 -translate-y-1/2 text-[13px] text-[#707070] font-[SemiBold]">AED</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* layout gallery */}
-                                                    <div className="md:mt-[30px] mt-[15px]">
-                                                        <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[10px]">
-                                                            Upload floor plan images <span className="text-[#EA3934]">*</span>
-                                                        </label>
-                                                        <div className="rounded-[10px] border border-dashed border-[rgba(34,34,34,0.15)] bg-white min-h-[180px] flex flex-col items-center justify-center text-center md:p-[56px] p-[20px]">
-                                                            {layoutImageByKey[getLayoutKey(property.id, layout.id)] ? (
-                                                                <img
-                                                                    src={layoutImageByKey[getLayoutKey(property.id, layout.id)]}
-                                                                    alt={`Layout ${layout.id} preview`}
-                                                                    className="w-full max-w-[360px] h-[140px] object-cover rounded-[8px]"
-                                                                />
-                                                            ) : (
-                                                                <>
-                                                                    <GalleryIcon width={42} height={42} />
-                                                                    <p className="text-[13px] font-[Medium] text-[#000] mt-[20px]">
-                                                                        Select a file or drag and drop here
-                                                                    </p>
-                                                                    <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px]">
-                                                                        JPG, PNG or webp, file size no more than 200MB
-                                                                    </p>
-                                                                </>
-                                                            )}
-                                                            <label className="cursor-pointer mt-[20px] h-[34px] px-[16px] rounded-[10px] bg-[#0832AE] text-white text-[12px] font-[SemiBold] inline-flex items-center justify-center">
-                                                                <input
-                                                                    type="file"
-                                                                    accept="image/*"
-                                                                    className="hidden"
-                                                                    onChange={(event) => {
-                                                                        const file = event.target.files?.[0];
-                                                                        handleLayoutImageChange(property.id, layout.id, file);
-                                                                        event.target.value = "";
-                                                                    }}
-                                                                />
-                                                                {layoutImageByKey[getLayoutKey(property.id, layout.id)] ? "Change File" : "Select File"}
-                                                            </label>
-                                                        </div>
-                                                    </div>
-
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {property.layouts.length > 0 && (
-                                        <div className="flex justify-center align-center m-[30px_0px_20px_0px]">
-                                            <button
-                                                type="button"
-                                                onClick={() => addLayout(property.id)}
-                                                className="cursor-pointer h-[21px] rounded-[5px] px-[8px] border border-[rgba(8,50,174,0.30)] bg-[rgba(8,50,174,0.10)] text-[#0832AE] text-[12px] font-[SemiBold] inline-flex items-center gap-[5px]"
-                                            >
-                                                <PlusIcon width={12} height={12} fill="#0832AE" />
-                                                Add Layout types
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
+            <div className={`rounded-b-[15px] bg-white md:p-[30px] p-[16px] ${isSaving ? "pointer-events-none opacity-60" : ""}`}>
+                <UnitDetails
+                    value={form}
+                    onChange={setForm}
+                    propertyTypeOptions={propertyTypeOptions}
+                    resolveFloorPlanSrc={floorPlanBaseUrl ? resolveFloorPlanSrc : undefined}
+                />
+            </div>
+            <div className="flex items-center justify-end gap-[10px] mt-[30px] px-[16px] md:px-[30px] pb-[20px]">
                 <button
                     type="button"
-                    onClick={addProperty}
-                    className="cursor-pointer mt-[12px] w-full h-[56px] rounded-[10px] border border-dashed border-[rgba(34,34,34,0.16)] text-[#0832AE] text-[13px] font-[SemiBold] inline-flex items-center justify-center gap-[7px]"
+                    onClick={handleDiscard}
+                    disabled={isSaving}
+                    className="cursor-pointer h-[44px] rounded-[10px] px-[20px] border border-[#222] text-[#222] text-[14px] font-[Bold] inline-flex items-center gap-[5px] disabled:opacity-50"
                 >
-                    <PlusIcon width={13} height={13} fill="#0832AE" />
-                    Add another property
+                    Discard
                 </button>
-            </div>
-            <div className="flex items-center justify-end gap-[10px] mt-[30px]">
-                <button className="cursor-pointer h-[44px] rounded-[10px] px-[20px] border border-[#222]  text-[#222] text-[14px] font-[Bold] inline-flex items-center gap-[5px]">Discard</button>
-                <button className="cursor-pointer h-[44px] rounded-[10px] px-[20px] bg-[#6A3CA8] text-[#FFF] text-[14px] font-[Bold] inline-flex items-center gap-[5px]">Save changes</button>
+                <button
+                    type="button"
+                    onClick={() => void handleSave()}
+                    disabled={isSaving}
+                    className="cursor-pointer h-[44px] rounded-[10px] px-[20px] bg-[#EA3934] text-[#FFF] text-[14px] font-[Bold] inline-flex items-center gap-[5px] disabled:opacity-50"
+                >
+                    {isSaving ? "Saving…" : primaryActionLabel}
+                </button>
             </div>
         </div>
     );

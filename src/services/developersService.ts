@@ -28,6 +28,15 @@ export const developersService = {
       { auth: true }
     );
   },
+  listDevelopersForDropdown(search?: string, signal?: AbortSignal) {
+    const searchParams = new URLSearchParams();
+    if (search?.trim()) searchParams.set("search", search.trim());
+    const qs = searchParams.toString();
+    return apiClient.get<import("../types/api").DevelopersDropdownResponse>(
+      `/developers/list${qs ? `?${qs}` : ""}`,
+      { auth: true, signal }
+    );
+  },
   inviteDeveloper(payload: InviteDeveloperPayload) {
     return apiClient.post<InviteDeveloperResponse>(
       "/developers/invite-developer",

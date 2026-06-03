@@ -4,12 +4,22 @@ import EditMedia from "./EditMedia";
 import EditPricePay from "./EditPricePay";
 import EditLocation from "./EditLocation";
 import EditUnitdetail from "./EditUnitdetail";
-import { useNavigate } from "react-router-dom";
 
 type EditTabId = "status" | "media" | "price" | "location" | "unit";
 
-const EditProject = () => {
-    const navigate = useNavigate();
+type EditProjectProps = {
+    projectId: string;
+    projectDetails: Record<string, unknown> | null;
+    unitProperties: Array<Record<string, unknown>>;
+    onRefresh: () => Promise<void>;
+};
+
+const EditProject = ({
+    projectId,
+    projectDetails,
+    unitProperties,
+    onRefresh,
+}: EditProjectProps) => {
     const [activeTab, setActiveTab] = useState<EditTabId>("status");
 
     const tabs: { id: EditTabId; label: string }[] = [
@@ -21,11 +31,53 @@ const EditProject = () => {
     ];
 
     const renderTabContent = () => {
-        if (activeTab === "status") return <EditProjectStatus />;
-        if (activeTab === "media") return <EditMedia />;
-        if (activeTab === "price") return <EditPricePay />;
-        if (activeTab === "location") return <EditLocation />;
-        return <EditUnitdetail />;
+        if (!projectDetails) return null;
+        if (activeTab === "status") {
+            return (
+                <EditProjectStatus
+                    projectId={projectId}
+                    project={projectDetails}
+                    primaryActionLabel="Save changes"
+                />
+            );
+        }
+        if (activeTab === "media") {
+            return (
+                <EditMedia
+                    projectId={projectId}
+                    project={projectDetails}
+                    onAfterSave={onRefresh}
+                    primaryActionLabel="Save changes"
+                />
+            );
+        }
+        if (activeTab === "price") {
+            return (
+                <EditPricePay
+                    projectId={projectId}
+                    project={projectDetails}
+                    primaryActionLabel="Save changes"
+                />
+            );
+        }
+        if (activeTab === "location") {
+            return (
+                <EditLocation
+                    projectId={projectId}
+                    project={projectDetails}
+                    onAfterSave={onRefresh}
+                    primaryActionLabel="Save changes"
+                />
+            );
+        }
+        return (
+            <EditUnitdetail
+                projectId={projectId}
+                unitProperties={unitProperties}
+                onAfterSave={onRefresh}
+                primaryActionLabel="Save changes"
+            />
+        );
     };
 
     return (
@@ -40,10 +92,11 @@ const EditProject = () => {
                                     key={tab.id}
                                     type="button"
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`cursor-pointer p-[20px_30px] border-b-2 text-[13px] font-[SemiBold] whitespace-nowrap transition-colors ${isActive
-                                        ? "text-[#0832AE] border-[#0832AE]"
-                                        : "text-[#222] border-transparent "
-                                        }`}
+                                    className={`cursor-pointer p-[20px_30px] border-b-2 text-[13px] font-[SemiBold] whitespace-nowrap transition-colors ${
+                                        isActive
+                                            ? "text-[#0832AE] border-[#0832AE]"
+                                            : "text-[#222] border-transparent "
+                                    }`}
                                 >
                                     {tab.label}
                                 </button>
@@ -52,9 +105,7 @@ const EditProject = () => {
                     </div>
                 </div>
 
-                <div>
-                    {renderTabContent()}
-                </div>
+                <div>{renderTabContent()}</div>
             </div>
         </div>
     );
