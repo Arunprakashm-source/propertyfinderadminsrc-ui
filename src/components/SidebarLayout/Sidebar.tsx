@@ -235,16 +235,16 @@ function Sidebar() {
                                                             : subItem.path === "/amenities"
                                                                 ? ["/amenities", "/amenitiesdetail"]
                                                                 : subItem.path === "/listingproperty"
-                                                                    ? ["/listingproperty", "/listingpropertydetail"]
-                                                                    : subItem.path === "/listingproject"
-                                                                        ? ["/listingproject", "/listingprojectdetail"]
-                                                                        : subItem.path === "/listingamenities"
-                                                                            ? ["/listingamenities", "/listingamenitiesdetail"]
-                                                                            : subItem.path === "/cmsteam"
-                                                                                ? ["/cmsteam", "/cmsteamdetail"]
-                                                                                : subItem.path === "/cmsblogs"
-                                                                                    ? ["/cmsblogs", "/cmsblogdetail"]
-                                                                                    : [subItem.path];
+                                                                        ? ["/listingproperty", "/listingpropertydetail"]
+                                                                        : subItem.path === "/listingproject"
+                                                                            ? ["/listingproject", "/listingprojectdetail"]
+                                                                            : subItem.path === "/listingamenities"
+                                                                                ? ["/listingamenities", "/listingamenitiesdetail"]
+                                                                                : subItem.path === "/cmsteam"
+                                                                                    ? ["/cmsteam", "/cmsteamdetail"]
+                                                                                    : subItem.path === "/cmsblogs"
+                                                                                        ? ["/cmsblogs", "/cmsblogdetail"]
+                                                                                        : [subItem.path];
                                         const isSubActive = subItemActivePaths.some(
                                             (p) => matchPath({ path: p, end: true }, location.pathname) != null
                                         );
@@ -327,19 +327,10 @@ function Sidebar() {
         <>
             {/* Mobile Hamburger Menu bg-gradient-to-r from-[#7B4DDB] to-[#9B6BFF] shadow-[0_5px_10px_rgba(123,77,49,0.15)]               bg-white/20 backdrop-blur-sm*/}
             <div className={`lg:hidden fixed top-0 left-0 right-0 bg-[#fff] p-[14px_16px] z-[10] flex items-center justify-between border-b border-[rgba(0,0,0,0.1)] ${isCheckoutRoute ? "border-none" : ""}`}>
-                {/* <Link to="/dashboard">
+                <Link to="/dashboard">
                     <img src={logo} alt="img" className="w-[100px]" />
-                </Link> */}
-                <h4 className="molumulk-text">
-                    <span>M</span>
-                    <span>0</span>
-                    <span>L</span>
-                    <span>U</span>
-                    <span>M</span>
-                    <span>U</span>
-                    <span>L</span>
-                    <span>K</span>
-                </h4>
+                </Link>
+
                 <Dialog open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
                     <button
                         type="button"

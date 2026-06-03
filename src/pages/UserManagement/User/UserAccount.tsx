@@ -241,16 +241,41 @@ function UserAccount() {
       });
     }
   };
+  function StatCards({ items }: { items: AdminUserListItem[] }) {
+    const stats = [
+      { label: "Total", value: items.length, accent: "#222" },
+      { label: "Active", value: items.filter((i) => i.isActive).length, accent: "#00A663" },
+      { label: "Inactive", value: items.filter((i) => !i.isActive).length, accent: "#EA3934" },
+      { label: "Banned", value: items.filter((i) => i.isBanned).length, accent: "#F59E0B" },
+    ];
 
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-[14px] mb-[24px]">
+        {stats.map((s) => (
+          <div
+            key={s.label}
+            className="rounded-[12px] border border-[rgba(34,34,34,0.08)] bg-white p-[16px] flex flex-col gap-[6px]"
+          >
+            <p className="text-[12px] font-[Medium] text-[#707070]">{s.label}</p>
+            <p className="text-[28px] font-[Bold] leading-none" style={{ color: s.accent }}>
+              {s.value}
+            </p>
+          </div>
+        ))}
+      </div>
+    );
+  }
   return (
     <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
       <Header
         title="UserAccount"
         showBack={false}
-        onBackClick={() => {}}
+        onBackClick={() => { }}
       />
 
       <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
+
+        <StatCards items={users} />
         <div className="flex items-center justify-between mb-[30px] gap-[10px]">
           <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[40px] w-full md:w-[280px]">
             <SearchIcon className="text-[#707070] shrink-0" />
@@ -330,55 +355,55 @@ function UserAccount() {
                   users.map((row, idx) => {
                     const avatarSrc = resolveUserAvatarSrc(row, userImgBaseUrl);
                     return (
-                    <div
-                      key={row._id}
-                      className={`grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_0.8fr_0.9fr_1fr] gap-[30px] items-center px-[14px] py-[12px] ${idx !== users.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
-                    >
-                      <div className="flex items-center gap-[10px]">
-                        <img
-                          src={avatarSrc}
-                          alt=""
-                          className="w-[40px] h-[40px] rounded-[12px] object-cover border border-[rgba(34,34,34,0.08)]"
-                          onError={(e) => {
-                            e.currentTarget.src = profileless;
-                          }}
-                        />
+                      <div
+                        key={row._id}
+                        className={`grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_0.8fr_0.9fr_1fr] gap-[30px] items-center px-[14px] py-[12px] ${idx !== users.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
+                      >
+                        <div className="flex items-center gap-[10px]">
+                          <img
+                            src={avatarSrc}
+                            alt=""
+                            className="w-[40px] h-[40px] rounded-[12px] object-cover border border-[rgba(34,34,34,0.08)]"
+                            onError={(e) => {
+                              e.currentTarget.src = profileless;
+                            }}
+                          />
+                          <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                            {formatUserName(row)}
+                          </p>
+                        </div>
                         <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                          {formatUserName(row)}
+                          {row.phoneNumber || "—"}
                         </p>
+                        <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                          {row.email || "—"}
+                        </p>
+                        <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                          {formatCountry(row)}
+                        </p>
+                        <UserStatusBadge isActive={row.isActive} isBanned={row.isBanned} />
+                        <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                          {formatCreatedAt(row.createdAt)}
+                        </p>
+                        <div className="flex items-center justify-start gap-[10px]">
+                          <button
+                            onClick={() => handleViewUser(row._id)}
+                            type="button"
+                            className="cursor-pointer p-[6px]"
+                            aria-label="Edit user"
+                          >
+                            <EyeDarkIcon width={20} height={20} />
+                          </button>
+                          <button
+                            type="button"
+                            className="cursor-pointer p-[6px]"
+                            aria-label="Delete user"
+                            onClick={() => handleDeleteUser(row)}
+                          >
+                            <TrashIcon width={20} height={20} />
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                        {row.phoneNumber || "—"}
-                      </p>
-                      <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                        {row.email || "—"}
-                      </p>
-                      <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                        {formatCountry(row)}
-                      </p>
-                      <UserStatusBadge isActive={row.isActive} isBanned={row.isBanned} />
-                      <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                        {formatCreatedAt(row.createdAt)}
-                      </p>
-                      <div className="flex items-center justify-start gap-[10px]">
-                        <button
-                          onClick={() => handleViewUser(row._id)}
-                          type="button"
-                          className="cursor-pointer p-[6px]"
-                          aria-label="Edit user"
-                        >
-                          <EyeDarkIcon width={20} height={20} />
-                        </button>
-                        <button
-                          type="button"
-                          className="cursor-pointer p-[6px]"
-                          aria-label="Delete user"
-                          onClick={() => handleDeleteUser(row)}
-                        >
-                          <TrashIcon width={20} height={20} />
-                        </button>
-                      </div>
-                    </div>
                     );
                   })
                 )}
