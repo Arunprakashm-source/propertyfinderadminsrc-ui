@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import home1img from "../../../../assets/img/home1.png";
-import home2img from "../../../../assets/img/home2.png";
-import home3img from "../../../../assets/img/home3.png";
-import home4img from "../../../../assets/img/home4.png";
-import home5img from "../../../../assets/img/home5.png";
-import home6img from "../../../../assets/img/home6.png";
-import { LeftArrowIcon, PlusIcon, RightArrowIcon, TrashIcon, ChangeIcon } from "../../../../assets/icons";
+import home1img from "../../../../../assets/img/home1.png";
+import home2img from "../../../../../assets/img/home2.png";
+import home3img from "../../../../../assets/img/home3.png";
+import home4img from "../../../../../assets/img/home4.png";
+import home5img from "../../../../../assets/img/home5.png";
+import home6img from "../../../../../assets/img/home6.png";
+import { LeftArrowIcon, PlusIcon, RightArrowIcon, TrashIcon, ChangeIcon } from "../../../../../assets/icons";
 
 const GALLERY_PAGE_SIZE = 12;
 
@@ -64,7 +64,7 @@ const maxInitialId = galleryImagess.reduce((m, r) => Math.max(m, r.id), 0);
 
 const isBlobUrl = (src: string) => src.startsWith("blob:");
 
-const ProjectImage = () => {
+const ImageSection = () => {
     const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(initialGalleryItems);
     const [galleryPage, setGalleryPage] = useState(0);
     const nextIdRef = useRef(maxInitialId + 1);
@@ -145,9 +145,9 @@ const ProjectImage = () => {
 
     return (
         <>
-            <div className="">
+            <div className="min-w-0 border-b border-[#EAEAEA]">
                 <div>
-                    <div className="flex items-center justify-between gap-4 md:p-[20px] p-[16px] ">
+                    <div className="flex items-center justify-between gap-4 md:p-[30px] p-[16px]">
                         <h2 className="text-[20px] font-[Bold] text-[#222]">Images</h2>
                         <div className="flex items-center gap-2 shrink-0">
                             <button
@@ -210,7 +210,7 @@ const ProjectImage = () => {
                         ))}
                     </div>
 
-                    <div className="flex items-center justify-between gap-2 md:p-[20px] p-[16px]">
+                    <div className="flex items-center justify-between gap-2 md:p-[30px] p-[16px]">
                         <button
                             type="button"
                             className="flex items-center gap-[5px] cursor-pointer"
@@ -262,4 +262,4 @@ const ProjectImage = () => {
     );
 };
 
-export default ProjectImage;
+export default ImageSection;

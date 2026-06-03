@@ -1,7 +1,7 @@
 import { DownArrowIcon, SearchIcon } from "../../../../assets/icons";
 import { useMemo, useState } from "react";
 
-const ProjectLocation = () => {
+const EditLocation = () => {
     const [isZoneDropdownOpen, setIsZoneDropdownOpen] = useState(false);
     const [zone, setZone] = useState("Dubai");
     const [searchLocation, setSearchLocation] = useState("Business Bay, Dubai");
@@ -13,8 +13,8 @@ const ProjectLocation = () => {
     }, [searchLocation, zone]);
     return (
         <div>
-            <div className="flex flex-col border border-[rgba(34,34,34,0.06)] rounded-[12px]">
-                <div className="bg-white  p-[16px] md:p-[20px] ">
+            <div className="flex flex-col">
+                <div className="bg-white border border-[rgba(34,34,34,0.06)] p-[16px] md:p-[30px]">
                     <h3 className="text-[20px] font-[Bold] text-[#222] mb-[14px]">Location</h3>
                     <div>
                         <label className="text-[14px] font-[SemiBold] text-[#222] block mb-[6px]">
@@ -56,7 +56,7 @@ const ProjectLocation = () => {
                     </div>
                 </div>
 
-                <div className="bg-white border-t border-[rgba(34,34,34,0.06)] p-[16px] md:p-[20px]">
+                <div className="bg-white border border-[rgba(34,34,34,0.06)] p-[16px] md:p-[30px]">
                     <h4 className="text-[20px] font-[Bold] text-[#222] text-center md:mb-[30px] mb-[16px]">Pin location on map</h4>
 
                     <div className="max-w-[360px] mx-auto md:mb-[40px] mb-[20px]">
@@ -83,8 +83,12 @@ const ProjectLocation = () => {
                     </div>
                 </div>
             </div>
+            <div className="flex items-center justify-end gap-[10px] mt-[30px]">
+                <button className="cursor-pointer h-[44px] rounded-[10px] px-[20px] border border-[#222]  text-[#222] text-[14px] font-[Bold] inline-flex items-center gap-[5px]">Discard</button>
+                <button className="cursor-pointer h-[44px] rounded-[10px] px-[20px] bg-[#6A3CA8] text-[#FFF] text-[14px] font-[Bold] inline-flex items-center gap-[5px]">Save changes</button>
+            </div>
         </div>
     );
 };
 
-export default ProjectLocation;
+export default EditLocation;

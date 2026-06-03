@@ -13,7 +13,9 @@ type Row = {
     location: string;
     phone: string;
     email: string;
-    listingtype: string;
+    price: string;
+    publishedAt: string;
+    status: string;
     image: string;
     agentname: string;
     authorizedagency: string[];
@@ -26,7 +28,9 @@ const rowData: Row[] = [
         location: "Dubai",
         phone: "1234567890",
         email: "dubai@gmail.com",
-        listingtype: "UAE",
+        price: "AED 10,000,000",
+        publishedAt: "01 June 2026",
+        status: "Active",
         image: profileimg,
         agentname: "John Doe",
         agentImg: profileimg,
@@ -38,7 +42,9 @@ const rowData: Row[] = [
         location: "Dubai",
         phone: "9898980909",
         email: "dubai@gmail.com",
-        listingtype: "Norway",
+        price: "AED 10,000,000",
+        publishedAt: "01 June 2026",
+        status: "Sold",
         image: profileimg,
         agentname: "John Doe",
         agentImg: profileimg,
@@ -51,7 +57,9 @@ const rowData: Row[] = [
         location: "Dubai",
         phone: "9898980909",
         email: "dubai@gmail.com",
-        listingtype: "SouthAfrica",
+        price: "AED 10,000,000",
+        publishedAt: "01 June 2026",
+        status: "Inactive",
         image: profileimg,
         agentname: "John Doe",
         agentImg: profileimg,
@@ -64,7 +72,9 @@ const rowData: Row[] = [
         location: "Dubai",
         phone: "9898980909",
         email: "dubai@gmail.com",
-        listingtype: "For Sale",
+        price: "AED 10,000,000",
+        publishedAt: "01 June 2026",
+        status: "Active",
         image: profileimg,
         agentname: "John Doe",
         agentImg: profileimg,
@@ -77,7 +87,9 @@ const rowData: Row[] = [
         location: "Dubai",
         phone: "9898980909",
         email: "dubai@gmail.com",
-        listingtype: "Denmark",
+        price: "AED 10,000,000",
+        publishedAt: "01 June 2026",
+        status: "Pending",
         image: profileimg,
         agentname: "John Doe",
         agentImg: profileimg,
@@ -89,7 +101,9 @@ const rowData: Row[] = [
         location: "Dubai",
         phone: "9898980909",
         email: "dubai@gmail.com",
-        listingtype: "switzerland",
+        price: "AED 10,000,000",
+        publishedAt: "01 June 2026",
+        status: "Rented",
         image: profileimg,
         agentname: "John Doe",
         agentImg: profileimg,
@@ -113,6 +127,108 @@ const availableDevelopersSeed: AvailableDeveloper[] = [
     { id: 5, developerName: "Omniyat", developerTitle: "Luxury Developer", developerAvatar: profileimg },
 ];
 
+type AvailableAgency = {
+    id: number;
+    agencyName: string;
+    email: string;
+    agencyAvatar: string;
+};
+
+const availableAgenciesSeed: AvailableAgency[] = [
+    { id: 1, agencyName: "Emmar properties", email: "contact@emmar.com", agencyAvatar: profileimg },
+    { id: 2, agencyName: "ALH Commercial", email: "info@alhcommercial.com", agencyAvatar: profileimg },
+    { id: 3, agencyName: "Knight Frank", email: "hello@knightfrank.com", agencyAvatar: profileimg },
+    { id: 4, agencyName: "ERA", email: "support@era.com", agencyAvatar: profileimg },
+    { id: 5, agencyName: "omniyat", email: "contact@omniyat.com", agencyAvatar: profileimg },
+    { id: 6, agencyName: "jbl", email: "info@jbl.com", agencyAvatar: profileimg },
+];
+
+const SORT_OPTIONS = [
+    { name: "Newest", value: "newest" },
+    { name: "Oldest", value: "oldest" },
+    { name: "Price: Low to High", value: "price-asc" },
+    { name: "Price: High to Low", value: "price-desc" },
+] as const;
+
+const parsePriceValue = (price: string) => {
+    const digits = price.replace(/[^\d]/g, "");
+    return digits ? Number(digits) : 0;
+};
+
+const projectStatusBadgeClass =
+    "rounded-[5px] h-[25px] w-fit text-center flex items-center justify-center p-[6px_10px] text-[12px] font-[SemiBold] whitespace-nowrap";
+
+const formatProjectStatusLabel = (status?: string) => {
+    if (!status?.trim()) return "";
+    const normalized = status.trim().toLowerCase();
+    if (normalized === "active") return "Active";
+    if (normalized === "inactive") return "Inactive";
+    if (normalized === "sold") return "Sold";
+    if (normalized === "rented") return "Rented";
+    if (normalized === "pending") return "Pending";
+    return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+};
+
+function PropertyStatusBadge({ status }: { status?: string }) {
+    const label = formatProjectStatusLabel(status);
+    if (!label) return <span className="text-[12px] text-[#707070]">—</span>;
+
+    const normalized = status!.trim().toLowerCase();
+
+    if (normalized === "active") {
+        return (
+            <span
+                className={`${projectStatusBadgeClass} bg-[#00A663] text-[#FFF]`}
+            >
+                {label}
+            </span>
+        );
+    }
+    if (normalized === "pending") {
+        return (
+            <span
+                className={`${projectStatusBadgeClass} border border-[rgba(34,34,34,0.10)] bg-white text-[#222]`}
+            >
+                {label}
+            </span>
+        );
+    }
+    if (normalized === "sold") {
+        return (
+            <span
+                className={`${projectStatusBadgeClass} border border-[#ea393459] bg-[#ea393414] text-[#ea3934]`}
+            >
+                {label}
+            </span>
+        );
+    }
+    if (normalized === "rented") {
+        return (
+            <span
+                className={`${projectStatusBadgeClass} bg-[#8ACBD0] text-[#FFF]`}
+            >
+                {label}
+            </span>
+        );
+    }
+    if (normalized === "inactive") {
+        return (
+            <span
+                className={`${projectStatusBadgeClass} bg-[#E80808] text-[#FFF]`}
+            >
+                {label}
+            </span>
+        );
+    }
+
+    return (
+        <span
+            className={`${projectStatusBadgeClass} border border-[rgba(34,34,34,0.10)] bg-[#F5F5F5] text-[#222]`}
+        >
+            {label}
+        </span>
+    );
+}
 const weekDays = ["S", "M", "T", "W", "T", "F", "S"];
 
 const formatDisplayDate = (date: Date) =>
@@ -166,6 +282,15 @@ function ListingProject() {
     const [developerSearch, setDeveloperSearch] = useState("");
     const developerDropdownRef = useRef<HTMLDivElement>(null);
 
+    const [isAgencyDropdownOpen, setIsAgencyDropdownOpen] = useState(false);
+    const [selectedAgency, setSelectedAgency] = useState<AvailableAgency | null>(null);
+    const [agencySearch, setAgencySearch] = useState("");
+    const agencyDropdownRef = useRef<HTMLDivElement>(null);
+
+    const [sortBy, setSortBy] = useState<(typeof SORT_OPTIONS)[number]["value"]>("newest");
+    const [isSortOpen, setIsSortOpen] = useState(false);
+    const sortRef = useRef<HTMLDivElement>(null);
+
     const filteredDevelopers = useMemo(() => {
         const q = developerSearch.trim().toLowerCase();
         if (!q) return availableDevelopersSeed;
@@ -175,6 +300,19 @@ function ListingProject() {
                 d.developerTitle.toLowerCase().includes(q)
         );
     }, [developerSearch]);
+
+    const filteredAgencies = useMemo(() => {
+        const q = agencySearch.trim().toLowerCase();
+        if (!q) return availableAgenciesSeed;
+        return availableAgenciesSeed.filter(
+            (a) =>
+                a.agencyName.toLowerCase().includes(q) ||
+                a.email.toLowerCase().includes(q)
+        );
+    }, [agencySearch]);
+
+    const selectedSortLabel =
+        SORT_OPTIONS.find((item) => item.value === sortBy)?.name ?? "Newest";
 
     useEffect(() => {
         if (!isDeveloperDropdownOpen) return;
@@ -186,10 +324,63 @@ function ListingProject() {
         return () => document.removeEventListener("mousedown", onDocMouseDown);
     }, [isDeveloperDropdownOpen]);
 
+    useEffect(() => {
+        if (!isAgencyDropdownOpen) return;
+        const onDocMouseDown = (e: MouseEvent) => {
+            if (agencyDropdownRef.current?.contains(e.target as Node)) return;
+            setIsAgencyDropdownOpen(false);
+        };
+        document.addEventListener("mousedown", onDocMouseDown);
+        return () => document.removeEventListener("mousedown", onDocMouseDown);
+    }, [isAgencyDropdownOpen]);
+
+    useEffect(() => {
+        if (!isSortOpen) return;
+        const onDocMouseDown = (e: MouseEvent) => {
+            if (sortRef.current?.contains(e.target as Node)) return;
+            setIsSortOpen(false);
+        };
+        document.addEventListener("mousedown", onDocMouseDown);
+        return () => document.removeEventListener("mousedown", onDocMouseDown);
+    }, [isSortOpen]);
+
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
 
-    const paginatedRows = rowData.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+    const filteredRows = useMemo(() => {
+        let rows = [...rowData];
+
+        if (selectedAgency) {
+            const agencyName = selectedAgency.agencyName.trim().toLowerCase();
+            rows = rows.filter((row) =>
+                row.authorizedagency.some(
+                    (agency) => agency.trim().toLowerCase() === agencyName
+                )
+            );
+        }
+
+        rows.sort((a, b) => {
+            switch (sortBy) {
+                case "oldest":
+                    return a.publishedAt.localeCompare(b.publishedAt);
+                case "price-asc":
+                    return parsePriceValue(a.price) - parsePriceValue(b.price);
+                case "price-desc":
+                    return parsePriceValue(b.price) - parsePriceValue(a.price);
+                case "newest":
+                default:
+                    return b.publishedAt.localeCompare(a.publishedAt);
+            }
+        });
+
+        return rows;
+    }, [selectedAgency, sortBy]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [selectedAgency, sortBy, selectedDeveloper]);
+
+    const paginatedRows = filteredRows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
     const calendarCells = getCalendarCells(displayMonth);
 
     const shiftMonth = (direction: -1 | 1) => {
@@ -286,7 +477,7 @@ function ListingProject() {
             <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
                 {/* Search and Add New Button */}
                 <div className="flex flex-wrap items-center mb-[30px] gap-[10px]">
-                    <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[40px] w-full md:w-[280px]">
+                    <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[40px]">
                         <SearchIcon className="text-[#707070] shrink-0" />
                         <input
                             type="search"
@@ -298,8 +489,11 @@ function ListingProject() {
                     <div className="relative" ref={developerDropdownRef}>
                         <button
                             type="button"
-                            onClick={() => setIsDeveloperDropdownOpen((prev) => !prev)}
-                            className="cursor-pointer md:w-[250px] w-full h-[40px] rounded-[15px] border border-[rgba(34,34,34,0.12)] px-[14px] text-left text-[14px] font-[Regular] flex items-center justify-between gap-[30px] bg-white"
+                            onClick={() => {
+                                setIsDeveloperDropdownOpen((prev) => !prev);
+                                setIsAgencyDropdownOpen(false);
+                            }}
+                            className="cursor-pointer  h-[40px] rounded-[15px] border border-[rgba(34,34,34,0.12)] px-[14px] text-left text-[14px] font-[Regular] flex items-center justify-between gap-[30px] bg-white"
                         >
                             <span className={selectedDeveloper ? "text-[#222] font-[Medium]" : "text-[#707070]"}>
                                 {selectedDeveloper ? selectedDeveloper.developerName : "Select developer"}
@@ -362,6 +556,127 @@ function ListingProject() {
                             </div>
                         )}
                     </div>
+                    {/* agency dropdown */}
+                    <div className="relative" ref={agencyDropdownRef}>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsAgencyDropdownOpen((prev) => !prev);
+                                setIsDeveloperDropdownOpen(false);
+                            }}
+                            className="cursor-pointer h-[40px] rounded-[15px] border border-[rgba(34,34,34,0.12)] px-[14px] text-left text-[14px] font-[Regular] flex items-center justify-between gap-[30px] bg-white"
+                        >
+                            <span className={selectedAgency ? "text-[#222] font-[Medium]" : "text-[#707070]"}>
+                                {selectedAgency ? selectedAgency.agencyName : "Select agency"}
+                            </span>
+                            <DownArrowIcon
+                                width={11}
+                                height={7}
+                                className={`shrink-0 transition-transform ${isAgencyDropdownOpen ? "rotate-180" : ""}`}
+                            />
+                        </button>
+                        {isAgencyDropdownOpen && (
+                            <div className="absolute left-0 right-0 top-full z-40 w-[250px] mt-[8px] rounded-[10px] bg-white py-[12px] shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
+                                <div className="px-[12px] mb-[10px]">
+                                    <div className="flex items-center gap-[10px] h-[40px] rounded-[10px] px-[12px] bg-white shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
+                                        <SearchIcon className="text-[#707070] shrink-0" />
+                                        <input
+                                            type="search"
+                                            value={agencySearch}
+                                            onChange={(e) => setAgencySearch(e.target.value)}
+                                            placeholder="Search agency"
+                                            className="w-full bg-transparent text-[13px] font-[Regular] text-[#222] placeholder:text-[#94A3B8] focus:outline-none"
+                                            autoFocus
+                                        />
+                                    </div>
+                                </div>
+                                <div className="max-h-[200px] overflow-y-auto px-[12px] scrollbar-hide">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedAgency(null);
+                                            setIsAgencyDropdownOpen(false);
+                                            setAgencySearch("");
+                                        }}
+                                        className="w-full text-left py-[10px] text-[12px] font-[Medium] text-[#707070] border-b border-[rgba(34,34,34,0.08)]"
+                                    >
+                                        All agencies
+                                    </button>
+                                    {filteredAgencies.length === 0 ? (
+                                        <p className="text-[12px] text-[#707070] py-[12px] text-center">
+                                            No agency found
+                                        </p>
+                                    ) : (
+                                        filteredAgencies.map((agency) => (
+                                            <button
+                                                key={agency.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedAgency(agency);
+                                                    setIsAgencyDropdownOpen(false);
+                                                    setAgencySearch("");
+                                                }}
+                                                className="w-full text-left flex gap-[12px] items-start py-[12px] border-b border-[rgba(34,34,34,0.08)] rounded-[6px] px-[4px] -mx-[4px] transition-colors"
+                                            >
+                                                <img
+                                                    src={agency.agencyAvatar}
+                                                    alt=""
+                                                    className="h-[40px] w-[40px] rounded-full object-cover shrink-0"
+                                                />
+                                                <div className="flex-1 min-w-0 pt-[2px]">
+                                                    <p className="text-[12px] font-[Bold] text-[#222] leading-tight">
+                                                        {agency.agencyName}
+                                                    </p>
+                                                    <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px] leading-tight truncate">
+                                                        {agency.email}
+                                                    </p>
+                                                </div>
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Sort by dropdown */}
+                    <div className="relative flex items-center gap-[8px] ml-auto" ref={sortRef}>
+                        <span className="text-[12px] font-[SemiBold] text-[#222] whitespace-nowrap">
+                            Sort by:
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setIsSortOpen((o) => !o)}
+                            className="h-[40px] min-w-[140px] rounded-[15px] border border-[rgba(34,34,34,0.12)] bg-white px-[14px] text-[14px] font-[Regular] text-[#222] inline-flex items-center justify-between gap-[8px] cursor-pointer"
+                        >
+                            <span className="truncate">{selectedSortLabel}</span>
+                            <DownArrowIcon
+                                width={11}
+                                height={7}
+                                className={`shrink-0 transition-transform ${isSortOpen ? "rotate-180" : ""}`}
+                            />
+                        </button>
+                        {isSortOpen && (
+                            <div className="absolute right-0 top-[48px] z-40 min-w-[200px] rounded-[10px] border border-[rgba(34,34,34,0.10)] bg-white py-[6px] shadow-[0_8px_20px_rgba(0,0,0,0.10)] max-h-[200px] overflow-y-auto">
+                                {SORT_OPTIONS.map((opt) => (
+                                    <button
+                                        key={opt.value}
+                                        type="button"
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            setSortBy(opt.value);
+                                            setIsSortOpen(false);
+                                        }}
+                                        className={`w-full px-[14px] py-[9px] text-left text-[12px] font-[Medium] hover:bg-[#F5F5F5] ${sortBy === opt.value ? "text-[#0832AE]" : "text-[#222]"
+                                            }`}
+                                    >
+                                        {opt.name}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                 </div>
                 {/* Date filter section */}
                 <div className="p-[5px] mb-[10px] bg-[#F5F5F5] lg:rounded-full rounded-[10px] flex flex-col gap-[12px] sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -407,11 +722,13 @@ function ListingProject() {
                 <div className="overflow-x-auto w-full scrollbar-hide mb-[30px]">
                     <div className="min-w-[1150px]">
                         <div className="rounded-[10px] border border-[rgba(34,34,34,0.08)] overflow-hidden bg-white">
-                            <div className="grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr] gap-[30px] items-center px-[14px] py-[12px] bg-[#F5F5F5] border-b border-[rgba(34,34,34,0.08)]">
+                            <div className="grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr_1fr_1fr] gap-[30px] items-center px-[14px] py-[12px] bg-[#F5F5F5] border-b border-[rgba(34,34,34,0.08)]">
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Name</p>
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Developer</p>
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Authorized Agency</p>
-                                <p className="text-[14px] font-[SemiBold] text-[#222]">Listing Type</p>
+                                <p className="text-[14px] font-[SemiBold] text-[#222]">Price</p>
+                                <p className="text-[14px] font-[SemiBold] text-[#222]">Status</p>
+                                <p className="text-[14px] font-[SemiBold] text-[#222]">Published At</p>
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Actions</p>
                             </div>
 
@@ -423,7 +740,7 @@ function ListingProject() {
                                     return (
                                         <div
                                             key={row.id}
-                                            className={`grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr] gap-[30px] items-center px-[14px] py-[12px] ${idx !== paginatedRows.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
+                                            className={`grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr_1fr_1fr] gap-[30px] items-center px-[14px] py-[12px] ${idx !== paginatedRows.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
                                         >
                                             <div className="flex items-center gap-[10px] min-w-0">
                                                 <div className="h-[40px] w-[40px] shrink-0 overflow-hidden rounded-[12px] bg-[#F5F5F5]">
@@ -459,7 +776,9 @@ function ListingProject() {
                                                 )}
                                             </div>
 
-                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.listingtype}</p>
+                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.price}</p>
+                                            <p className="text-[12px] font-[Regular] text-[#222] truncate"><PropertyStatusBadge status={row.status} /></p>
+                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.publishedAt}</p>
                                             <div className="flex items-center justify-start gap-[10px]">
                                                 <button onClick={() => navigate(`/listingprojectdetail`)} type="button" className="cursor-pointer p-[6px] " aria-label="View">
                                                     <EditIcon width={20} height={20} />
@@ -479,7 +798,7 @@ function ListingProject() {
                 {/* Pagenation */}
                 <Pagenation
                     currentPage={currentPage}
-                    totalItems={rowData.length}
+                    totalItems={filteredRows.length}
                     itemsPerPage={itemsPerPage}
                     onPageChange={setCurrentPage}
                 />

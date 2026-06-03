@@ -59,7 +59,7 @@ const rowData: Row[] = [
     },
 ];
 
-function ListingAmenities() {
+function Amenities() {
     const navigate = useNavigate()
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
@@ -112,7 +112,7 @@ function ListingAmenities() {
                                         <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.slug}</p>
                                         <p className="text-[12px] font-[Regular] text-[#222] truncate">{row.category}</p>
                                         <div className="flex items-center justify-start gap-[10px]">
-                                            <button onClick={() => navigate(`/listingamenitiesdetail`)} type="button" className="cursor-pointer p-[6px] " aria-label="View">
+                                            <button onClick={() => navigate(`/amenitiesdetail`)} type="button" className="cursor-pointer p-[6px] " aria-label="View">
                                                 <EditIcon width={20} height={20} />
                                             </button>
                                             <button type="button" className="cursor-pointer p-[6px] " aria-label="Delete">
@@ -138,4 +138,4 @@ function ListingAmenities() {
     );
 }
 
-export default ListingAmenities;   
+export default Amenities;   

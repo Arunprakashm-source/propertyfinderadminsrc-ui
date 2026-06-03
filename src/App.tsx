@@ -17,8 +17,8 @@ import ListingProperty from "./pages/ListingManagement/ListingProperty/ListingPr
 import ListingPropertyDetail from "./pages/ListingManagement/ListingProperty/ListingPropertyDetail";
 import ListingProject from "./pages/ListingManagement/ListingProject/ListingProject";
 import ListingProjectDetail from "./pages/ListingManagement/ListingProject/ListingProjectDetail";
-import ListingAmenities from "./pages/ListingManagement/ListingAmenities/ListingAmenities";
-import ListingAmenitiesDetail from "./pages/ListingManagement/ListingAmenities/ListingAmenitiesDetail";
+import ListingAmenities from "./pages/Master/Amenities/Amenities";
+import ListingAmenitiesDetail from "./pages/Master/Amenities/AmenitiesDetail";
 import DeveloperAccView from "./pages/UserManagement/Developer/DeveloperAccView";
 import ReportManagement from "./pages/ReportManagement/ReportManagement";
 import ReportManagementDetail from "./pages/ReportManagement/ReportManagementDetail";
@@ -31,6 +31,10 @@ import LegalPagesSettings from "./pages/CMSManagement/Legal/LegalPagesSettings";
 import BlogManagement from "./pages/CMSManagement/Blog/BlogManagement";
 import BlogDetailSettings from "./pages/CMSManagement/Blog/BlogDetailSettings";
 import ProtectedRoute from "./components/ProtectedRoute";
+import Amenities from "./pages/Master/Amenities/Amenities";
+import AmenitiesDetail from "./pages/Master/Amenities/AmenitiesDetail";
+import ListingProjectInquiry from "./pages/ListingManagement/ListingProjectInquiry/ListingProjectInquiry";
+import ListingPropertyInquiry from "./pages/ListingManagement/ListingPropertyInquiry/ListingPropertyInquiry";
 function App() {
 
   return (
@@ -55,8 +59,10 @@ function App() {
               <Route path="/listingpropertydetail" element={<ListingPropertyDetail />} />
               <Route path="/listingproject" element={<ListingProject />} />
               <Route path="/listingprojectdetail" element={<ListingProjectDetail />} />
-              <Route path="/listingamenities" element={<ListingAmenities />} />
-              <Route path="/listingamenitiesdetail" element={<ListingAmenitiesDetail />} />
+              <Route path="/listingprojectinquiry" element={<ListingProjectInquiry />} />
+              <Route path="/listingpropertyinquiry" element={<ListingPropertyInquiry />} />
+              <Route path="/amenities" element={<Amenities />} />
+              <Route path="/amenitiesdetail" element={<AmenitiesDetail />} />
               <Route path="/reportsmanagement" element={<ReportManagement />} />
               <Route path="/reportsmanagementdetail" element={<ReportManagementDetail />} />
               <Route path="/cmsaboutus" element={<AboutUsSettings />} />

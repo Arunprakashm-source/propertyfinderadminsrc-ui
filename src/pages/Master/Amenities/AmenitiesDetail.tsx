@@ -176,7 +176,7 @@ function MediaUploadBlock({
     );
 }
 
-function ListingAmenitiesDetail() {
+function AmenitiesDetail() {
     const navigate = useNavigate();
 
     const [name, setName] = useState("");
@@ -245,7 +245,7 @@ function ListingAmenitiesDetail() {
     return (
         <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
             <Header
-                title="Listing Amenity Detail"
+                title="Amenity Detail"
                 showBack={true}
                 onBackClick={() => navigate(-1)}
             />
@@ -401,4 +401,4 @@ function ListingAmenitiesDetail() {
     );
 }
 
-export default ListingAmenitiesDetail;
+export default AmenitiesDetail;
