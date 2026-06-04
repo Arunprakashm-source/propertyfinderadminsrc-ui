@@ -115,6 +115,49 @@ function PropertyStatusBadge({ status }: { status?: string }) {
         </span>
     );
 }
+
+function StatCards({
+    totalProjects,
+    activeProjects,
+    inactiveProjects,
+    pendingProjects,
+}: {
+    totalProjects: number;
+    activeProjects: number;
+    inactiveProjects: number;
+    pendingProjects: number;
+}) {
+    const stats = [
+        {
+            label: "Total",
+            value: totalProjects,
+            accent: "#222",
+        },
+        { label: "Active", value: activeProjects, accent: "#00A663" },
+        { label: "Inactive", value: inactiveProjects, accent: "#EA3934" },
+        { label: "Pending", value: pendingProjects, accent: "#F59E0B" },
+    ];
+
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[14px] mb-[24px]">
+            {stats.map((s) => (
+                <div
+                    key={s.label}
+                    className="rounded-[12px] border border-[rgba(34,34,34,0.08)] bg-white p-[16px] flex flex-col gap-[6px]"
+                >
+                    <p className="text-[12px] font-[Medium] text-[#707070]">{s.label}</p>
+                    <p
+                        className="text-[28px] font-[Bold] leading-none"
+                        style={{ color: s.accent }}
+                    >
+                        {s.value}
+                    </p>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 const weekDays = ["S", "M", "T", "W", "T", "F", "S"];
 
 const formatDisplayDate = (date: Date) =>
@@ -264,8 +307,8 @@ function ListingProject() {
             if (developerDropdownRef.current?.contains(e.target as Node)) return;
             setIsDeveloperDropdownOpen(false);
         };
-        document.addEventListener("mousedown", onDocMouseDown);
-        return () => document.removeEventListener("mousedown", onDocMouseDown);
+        document.addEventListener("mousedown", onDocMouseDown as unknown as EventListener);
+        return () => document.removeEventListener("mousedown", onDocMouseDown as unknown as EventListener);
     }, [isDeveloperDropdownOpen]);
 
     useEffect(() => {
@@ -274,8 +317,8 @@ function ListingProject() {
             if (agencyDropdownRef.current?.contains(e.target as Node)) return;
             setIsAgencyDropdownOpen(false);
         };
-        document.addEventListener("mousedown", onDocMouseDown);
-        return () => document.removeEventListener("mousedown", onDocMouseDown);
+        document.addEventListener("mousedown", onDocMouseDown as unknown as EventListener);
+        return () => document.removeEventListener("mousedown", onDocMouseDown as unknown as EventListener);
     }, [isAgencyDropdownOpen]);
 
     useEffect(() => {
@@ -284,8 +327,8 @@ function ListingProject() {
             if (sortRef.current?.contains(e.target as Node)) return;
             setIsSortOpen(false);
         };
-        document.addEventListener("mousedown", onDocMouseDown);
-        return () => document.removeEventListener("mousedown", onDocMouseDown);
+        document.addEventListener("mousedown", onDocMouseDown as unknown as EventListener);
+        return () => document.removeEventListener("mousedown", onDocMouseDown as unknown as EventListener);
     }, [isSortOpen]);
 
     useEffect(() => {
@@ -438,19 +481,17 @@ function ListingProject() {
                 <button
                     type="button"
                     onClick={() => openDatePicker(type)}
-                    className={`cursor-pointer h-full rounded-full text-[12px] inline-flex items-center ${
-                        selectedDate ? "pl-[12px] pr-[4px]" : "px-[12px]"
-                    } ${
-                        selectedDate
+                    className={`cursor-pointer h-full rounded-full text-[12px] inline-flex items-center ${selectedDate ? "pl-[12px] pr-[4px]" : "px-[12px]"
+                        } ${selectedDate
                             ? "font-[SemiBold] text-[#222]"
                             : "font-[Regular] text-[#707070]"
-                    }`}
+                        }`}
                 >
                     {selectedDate
                         ? formatDisplayDate(selectedDate)
                         : type === "from"
-                          ? "From date"
-                          : "To date"}
+                            ? "From date"
+                            : "To date"}
                 </button>
                 {selectedDate && (
                     <button
@@ -512,11 +553,10 @@ function ListingProject() {
                                     key={`${type}-${day}-${idx}`}
                                     type="button"
                                     onClick={() => selectDate(day)}
-                                    className={`h-[30px] w-[30px] mx-auto rounded-full text-[12px] font-[SemiBold] border transition-colors ${
-                                        isSelected
-                                            ? "bg-[#EA3934] text-white border-[#EA3934]"
-                                            : "text-[#707070] border-[rgba(34,34,34,0.10)] hover:bg-[#F2F2F2]"
-                                    }`}
+                                    className={`h-[30px] w-[30px] mx-auto rounded-full text-[12px] font-[SemiBold] border transition-colors ${isSelected
+                                        ? "bg-[#EA3934] text-white border-[#EA3934]"
+                                        : "text-[#707070] border-[rgba(34,34,34,0.10)] hover:bg-[#F2F2F2]"
+                                        }`}
                                 >
                                     {day}
                                 </button>
@@ -531,9 +571,12 @@ function ListingProject() {
 
     return (
         <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
-            <Header title="Listing Projects" showBack={false} onBackClick={() => {}} />
+            <Header title="Listing Projects" showBack={false} onBackClick={() => { }} />
 
             <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
+
+                <StatCards totalProjects={totalProjects} activeProjects={projects.filter((p) => p.status === "active").length} inactiveProjects={projects.filter((p) => p.status === "inactive").length} pendingProjects={projects.filter((p) => p.status === "pending").length} />
+
                 <div className="flex flex-wrap items-center mb-[30px] gap-[10px]">
                     <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[40px] min-w-[200px]">
                         <SearchIcon className="text-[#707070] shrink-0" />
@@ -834,100 +877,100 @@ function ListingProject() {
                                 </p>
                             ) : (
                                 <div>
-                                {projects.map((row, idx) => {
-                                    const agencyNames =
-                                        row.authorizedAgencyNames ||
-                                        row.authorizedAgencies?.map((a) => a.agencyName || "").filter(Boolean) ||
-                                        [];
-                                    const { visible: visibleAgencies, overflowLabel } =
-                                        formatAuthorizedAgencies(agencyNames);
+                                    {projects.map((row, idx) => {
+                                        const agencyNames =
+                                            row.authorizedAgencyNames ||
+                                            row.authorizedAgencies?.map((a) => a.agencyName || "").filter(Boolean) ||
+                                            [];
+                                        const { visible: visibleAgencies, overflowLabel } =
+                                            formatAuthorizedAgencies(agencyNames);
 
-                                    return (
-                                        <div
-                                            key={row._id}
-                                            className={`grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr_1fr_1fr] gap-[30px] items-center px-[14px] py-[12px] ${idx !== projects.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
-                                        >
-                                            <div className="flex items-center gap-[10px] min-w-0">
-                                                <div className="h-[40px] w-[40px] shrink-0 overflow-hidden rounded-[12px] bg-[#F5F5F5]">
+                                        return (
+                                            <div
+                                                key={row._id}
+                                                className={`grid grid-cols-[1.3fr_1fr_1.3fr_1.1fr_1fr_1fr_1fr] gap-[30px] items-center px-[14px] py-[12px] ${idx !== projects.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
+                                            >
+                                                <div className="flex items-center gap-[10px] min-w-0">
+                                                    <div className="h-[40px] w-[40px] shrink-0 overflow-hidden rounded-[12px] bg-[#F5F5F5]">
+                                                        <img
+                                                            src={resolveProjectImageSrc(row.images, projectImgBaseUrl)}
+                                                            alt=""
+                                                            className="h-full w-full object-cover rounded-[8px]"
+                                                        />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[12px] font-[SemiBold] text-[#222] leading-[1.2] mb-[4px] truncate">
+                                                            {row.projectName || "—"}
+                                                        </p>
+                                                        <p className="text-[12px] text-[#707070] leading-[1.2] flex items-center gap-[5px] min-w-0">
+                                                            <span className="inline-flex shrink-0">
+                                                                <LocationIcon width={11} height={15} />
+                                                            </span>
+                                                            <span className="truncate">{formatProjectLocation(row)}</span>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-[10px]">
                                                     <img
-                                                        src={resolveProjectImageSrc(row.images, projectImgBaseUrl)}
+                                                        src={resolveProfileSrc(
+                                                            row.developer?.profilePicture,
+                                                            developerImgBaseUrl
+                                                        )}
                                                         alt=""
-                                                        className="h-full w-full object-cover rounded-[8px]"
+                                                        className="w-[40px] h-[40px] rounded-[12px] object-cover border border-[rgba(34,34,34,0.08)]"
                                                     />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-[12px] font-[SemiBold] text-[#222] leading-[1.2] mb-[4px] truncate">
-                                                        {row.projectName || "—"}
+                                                    <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                                                        {row.developer?.name || "—"}
                                                     </p>
-                                                    <p className="text-[12px] text-[#707070] leading-[1.2] flex items-center gap-[5px] min-w-0">
-                                                        <span className="inline-flex shrink-0">
-                                                            <LocationIcon width={11} height={15} />
+                                                </div>
+                                                <div className="flex items-center gap-[6px] flex-wrap min-w-0">
+                                                    {visibleAgencies.map((agency) => (
+                                                        <span
+                                                            key={`${row._id}-${agency}`}
+                                                            className="inline-flex items-center rounded-[4px] h-[20px] px-[7px] text-[12px] font-[SemiBold] border border-[rgba(34,34,34,0.10)] text-[#222] shrink-0"
+                                                        >
+                                                            {agency}
                                                         </span>
-                                                        <span className="truncate">{formatProjectLocation(row)}</span>
-                                                    </p>
+                                                    ))}
+                                                    {overflowLabel && (
+                                                        <span className="inline-flex items-center h-[20px] px-[4px] text-[12px] font-[SemiBold] text-[#707070] shrink-0">
+                                                            {overflowLabel}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                                                    {row.priceLabel || "—"}
+                                                </p>
+                                                <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                                                    <PropertyStatusBadge status={row.status} />
+                                                </p>
+                                                <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                                                    {formatPublishedAt(row.publishedAt)}
+                                                </p>
+                                                <div className="flex items-center justify-start gap-[10px]">
+                                                    <button
+                                                        onClick={() =>
+                                                            navigate(`/listingprojectdetail?id=${row._id}`)
+                                                        }
+                                                        type="button"
+                                                        className="cursor-pointer p-[6px]"
+                                                        aria-label="View"
+                                                    >
+                                                        <EyeDarkIcon width={20} height={20} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="cursor-pointer p-[6px]"
+                                                        aria-label="Delete"
+                                                        onClick={() => handleDeleteProject(row)}
+                                                    >
+                                                        <TrashIcon width={20} height={20} />
+                                                    </button>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-[10px]">
-                                                <img
-                                                    src={resolveProfileSrc(
-                                                        row.developer?.profilePicture,
-                                                        developerImgBaseUrl
-                                                    )}
-                                                    alt=""
-                                                    className="w-[40px] h-[40px] rounded-[12px] object-cover border border-[rgba(34,34,34,0.08)]"
-                                                />
-                                                <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                                                    {row.developer?.name || "—"}
-                                                </p>
-                                            </div>
-                                            <div className="flex items-center gap-[6px] flex-wrap min-w-0">
-                                                {visibleAgencies.map((agency) => (
-                                                    <span
-                                                        key={`${row._id}-${agency}`}
-                                                        className="inline-flex items-center rounded-[4px] h-[20px] px-[7px] text-[12px] font-[SemiBold] border border-[rgba(34,34,34,0.10)] text-[#222] shrink-0"
-                                                    >
-                                                        {agency}
-                                                    </span>
-                                                ))}
-                                                {overflowLabel && (
-                                                    <span className="inline-flex items-center h-[20px] px-[4px] text-[12px] font-[SemiBold] text-[#707070] shrink-0">
-                                                        {overflowLabel}
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                                                {row.priceLabel || "—"}
-                                            </p>
-                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                                                <PropertyStatusBadge status={row.status} />
-                                            </p>
-                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                                                {formatPublishedAt(row.publishedAt)}
-                                            </p>
-                                            <div className="flex items-center justify-start gap-[10px]">
-                                                <button
-                                                    onClick={() =>
-                                                        navigate(`/listingprojectdetail?id=${row._id}`)
-                                                    }
-                                                    type="button"
-                                                    className="cursor-pointer p-[6px]"
-                                                    aria-label="View"
-                                                >
-                                                    <EyeDarkIcon width={20} height={20} />
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="cursor-pointer p-[6px]"
-                                                    aria-label="Delete"
-                                                    onClick={() => handleDeleteProject(row)}
-                                                >
-                                                    <TrashIcon width={20} height={20} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

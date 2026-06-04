@@ -26,6 +26,7 @@ import type {
     AgencyDropdownItem,
     AgentDropdownItem,
     ListingTypeMasterItem,
+    PropertiesListCounts,
 } from "../../../types/api";
 
 type ListingChip = { label: string; value: string };
@@ -212,6 +213,44 @@ function PropertyStatusBadge({ status }: { status?: string }) {
     );
 }
 
+function StatCards({
+    counts,
+    totalFallback,
+}: {
+    counts?: PropertiesListCounts;
+    totalFallback: number;
+}) {
+    const stats = [
+        {
+            label: "Total",
+            value: counts?.totalProperties ?? totalFallback,
+            accent: "#222",
+        },
+        { label: "Active", value: counts?.activeProperties ?? 0, accent: "#00A663" },
+        { label: "Inactive", value: counts?.inactiveProperties ?? 0, accent: "#EA3934" },
+        { label: "Pending", value: counts?.pendingProperties ?? 0, accent: "#F59E0B" },
+    ];
+
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[14px] mb-[24px]">
+            {stats.map((s) => (
+                <div
+                    key={s.label}
+                    className="rounded-[12px] border border-[rgba(34,34,34,0.08)] bg-white p-[16px] flex flex-col gap-[6px]"
+                >
+                    <p className="text-[12px] font-[Medium] text-[#707070]">{s.label}</p>
+                    <p
+                        className="text-[28px] font-[Bold] leading-none"
+                        style={{ color: s.accent }}
+                    >
+                        {s.value}
+                    </p>
+                </div>
+            ))}
+        </div>
+    );
+}
+
 const formatPublishedAt = (value?: string) => {
     if (!value) return "—";
     const date = new Date(value);
@@ -263,6 +302,7 @@ function ListingProperty() {
     const [currentPage, setCurrentPage] = useState(1);
     const [properties, setProperties] = useState<AdminPropertyListItem[]>([]);
     const [totalProperties, setTotalProperties] = useState(0);
+    const [listCounts, setListCounts] = useState<PropertiesListCounts>();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [propertyImgBaseUrl, setPropertyImgBaseUrl] = useState("");
@@ -470,10 +510,12 @@ function ListingProperty() {
                 if (signal.aborted) return;
                 setProperties(data.properties ?? []);
                 setTotalProperties(data.pagination?.totalProperties ?? 0);
+                setListCounts(data.counts);
             } catch (err) {
                 if (signal.aborted) return;
                 setProperties([]);
                 setTotalProperties(0);
+                setListCounts(undefined);
                 setError(getApiErrorMessage(err, "Failed to load properties"));
             } finally {
                 if (!signal.aborted) setLoading(false);
@@ -575,19 +617,17 @@ function ListingProperty() {
                 <button
                     type="button"
                     onClick={() => openDatePicker(type)}
-                    className={`cursor-pointer h-full rounded-full text-[12px] inline-flex items-center ${
-                        selectedDate ? "pl-[12px] pr-[4px]" : "px-[12px]"
-                    } ${
-                        selectedDate
+                    className={`cursor-pointer h-full rounded-full text-[12px] inline-flex items-center ${selectedDate ? "pl-[12px] pr-[4px]" : "px-[12px]"
+                        } ${selectedDate
                             ? "font-[SemiBold] text-[#222]"
                             : "font-[Regular] text-[#707070]"
-                    }`}
+                        }`}
                 >
                     {selectedDate
                         ? formatDisplayDate(selectedDate)
                         : type === "from"
-                          ? "From date"
-                          : "To date"}
+                            ? "From date"
+                            : "To date"}
                 </button>
                 {selectedDate && (
                     <button
@@ -649,11 +689,10 @@ function ListingProperty() {
                                     key={`${type}-${day}-${idx}`}
                                     type="button"
                                     onClick={() => selectDate(day)}
-                                    className={`h-[30px] w-[30px] mx-auto rounded-full text-[12px] font-[SemiBold] border transition-colors ${
-                                        isSelected
-                                            ? "bg-[#EA3934] text-white border-[#EA3934]"
-                                            : "text-[#707070] border-[rgba(34,34,34,0.10)] hover:bg-[#F2F2F2]"
-                                    }`}
+                                    className={`h-[30px] w-[30px] mx-auto rounded-full text-[12px] font-[SemiBold] border transition-colors ${isSelected
+                                        ? "bg-[#EA3934] text-white border-[#EA3934]"
+                                        : "text-[#707070] border-[rgba(34,34,34,0.10)] hover:bg-[#F2F2F2]"
+                                        }`}
                                 >
                                     {day}
                                 </button>
@@ -667,10 +706,14 @@ function ListingProperty() {
 
     return (
         <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
-            <Header title="Listing Property" showBack={false} onBackClick={() => {}} />
+            <Header title="Listing Property" showBack={false} onBackClick={() => { }} />
 
             <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
-                <div className="flex flex-wrap items-center mb-[30px] gap-[10px]">
+
+                <StatCards counts={listCounts} totalFallback={totalProperties} />
+
+                {/* search and filter */}
+                <div className="flex flex-wrap items-center justify-between mb-[30px] gap-[10px]">
                     <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[40px] w-full md:w-[280px]">
                         <SearchIcon className="text-[#707070] shrink-0" />
                         <input
@@ -681,187 +724,189 @@ function ListingProperty() {
                             className="w-full bg-transparent text-[12px] font-[Regular] text-[#222] placeholder:text-[#707070] focus:outline-none"
                         />
                     </div>
-
-                    <div className="relative" ref={agentDropdownRef}>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsAgentDropdownOpen((prev) => !prev);
-                                setIsAgencyDropdownOpen(false);
-                            }}
-                            className="cursor-pointer md:w-[250px] w-full h-[40px] rounded-[15px] border border-[rgba(34,34,34,0.12)] px-[14px] text-left text-[14px] font-[Regular] flex items-center justify-between gap-[30px] bg-white"
-                        >
-                            <span
-                                className={
-                                    selectedAgent ? "text-[#222] font-[Medium]" : "text-[#707070]"
-                                }
+                    <div className="flex items-center gap-[10px]">
+                        {/* agent dropdown */}
+                        <div className="relative" ref={agentDropdownRef}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsAgentDropdownOpen((prev) => !prev);
+                                    setIsAgencyDropdownOpen(false);
+                                }}
+                                className="cursor-pointer md:w-[250px] w-full h-[40px] rounded-[15px] border border-[rgba(34,34,34,0.12)] px-[14px] text-left text-[14px] font-[Regular] flex items-center justify-between gap-[30px] bg-white"
                             >
-                                {selectedAgent?.fullName || "Select agent"}
-                            </span>
-                            <DownArrowIcon
-                                width={11}
-                                height={7}
-                                className={`shrink-0 transition-transform ${isAgentDropdownOpen ? "rotate-180" : ""}`}
-                            />
-                        </button>
-                        {isAgentDropdownOpen && (
-                            <div className="absolute left-0 right-0 top-full z-40 w-[250px] mt-[8px] rounded-[10px] bg-white py-[12px] shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
-                                <div className="px-[12px] mb-[10px]">
-                                    <div className="flex items-center gap-[10px] h-[40px] rounded-[10px] px-[12px] bg-white shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
-                                        <SearchIcon className="text-[#707070] shrink-0" />
-                                        <input
-                                            type="search"
-                                            value={agentSearch}
-                                            onChange={(e) => setAgentSearch(e.target.value)}
-                                            placeholder="Search agent"
-                                            className="w-full bg-transparent text-[13px] font-[Regular] text-[#222] placeholder:text-[#94A3B8] focus:outline-none"
-                                            autoFocus
-                                        />
+                                <span
+                                    className={
+                                        selectedAgent ? "text-[#222] font-[Medium]" : "text-[#707070]"
+                                    }
+                                >
+                                    {selectedAgent?.fullName || "Select agent"}
+                                </span>
+                                <DownArrowIcon
+                                    width={11}
+                                    height={7}
+                                    className={`shrink-0 transition-transform ${isAgentDropdownOpen ? "rotate-180" : ""}`}
+                                />
+                            </button>
+                            {isAgentDropdownOpen && (
+                                <div className="absolute left-0 right-0 top-full z-40 w-[250px] mt-[8px] rounded-[10px] bg-white py-[12px] shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
+                                    <div className="px-[12px] mb-[10px]">
+                                        <div className="flex items-center gap-[10px] h-[40px] rounded-[10px] px-[12px] bg-white shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
+                                            <SearchIcon className="text-[#707070] shrink-0" />
+                                            <input
+                                                type="search"
+                                                value={agentSearch}
+                                                onChange={(e) => setAgentSearch(e.target.value)}
+                                                placeholder="Search agent"
+                                                className="w-full bg-transparent text-[13px] font-[Regular] text-[#222] placeholder:text-[#94A3B8] focus:outline-none"
+                                                autoFocus
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="max-h-[200px] overflow-y-auto px-[12px] scrollbar-hide">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedAgent(null);
+                                                setIsAgentDropdownOpen(false);
+                                                setAgentSearch("");
+                                            }}
+                                            className="w-full text-left py-[10px] text-[12px] font-[Medium] text-[#707070] border-b border-[rgba(34,34,34,0.08)]"
+                                        >
+                                            All agents
+                                        </button>
+                                        {filteredAgents.length === 0 ? (
+                                            <p className="text-[12px] text-[#707070] py-[12px] text-center">
+                                                No agents found
+                                            </p>
+                                        ) : (
+                                            filteredAgents.map((agent) => (
+                                                <button
+                                                    key={agent._id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedAgent(agent);
+                                                        setIsAgentDropdownOpen(false);
+                                                        setAgentSearch("");
+                                                    }}
+                                                    className="w-full text-left flex gap-[12px] items-start py-[12px] border-b border-[rgba(34,34,34,0.08)] rounded-[6px] px-[4px] -mx-[4px] transition-colors"
+                                                >
+                                                    <img
+                                                        src={resolveProfileSrc(
+                                                            agent.profilePicture,
+                                                            agentImgBaseUrl
+                                                        )}
+                                                        alt=""
+                                                        className="h-[40px] w-[40px] rounded-full object-cover shrink-0"
+                                                    />
+                                                    <div className="flex-1 min-w-0 pt-[2px]">
+                                                        <p className="text-[12px] font-[Bold] text-[#222] leading-tight">
+                                                            {agent.fullName || "—"}
+                                                        </p>
+                                                        <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px] leading-tight truncate">
+                                                            {agent.agency?.agencyName ||
+                                                                agent.email ||
+                                                                "—"}
+                                                        </p>
+                                                    </div>
+                                                </button>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
-                                <div className="max-h-[200px] overflow-y-auto px-[12px] scrollbar-hide">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedAgent(null);
-                                            setIsAgentDropdownOpen(false);
-                                            setAgentSearch("");
-                                        }}
-                                        className="w-full text-left py-[10px] text-[12px] font-[Medium] text-[#707070] border-b border-[rgba(34,34,34,0.08)]"
-                                    >
-                                        All agents
-                                    </button>
-                                    {filteredAgents.length === 0 ? (
-                                        <p className="text-[12px] text-[#707070] py-[12px] text-center">
-                                            No agents found
-                                        </p>
-                                    ) : (
-                                        filteredAgents.map((agent) => (
-                                            <button
-                                                key={agent._id}
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedAgent(agent);
-                                                    setIsAgentDropdownOpen(false);
-                                                    setAgentSearch("");
-                                                }}
-                                                className="w-full text-left flex gap-[12px] items-start py-[12px] border-b border-[rgba(34,34,34,0.08)] rounded-[6px] px-[4px] -mx-[4px] transition-colors"
-                                            >
-                                                <img
-                                                    src={resolveProfileSrc(
-                                                        agent.profilePicture,
-                                                        agentImgBaseUrl
-                                                    )}
-                                                    alt=""
-                                                    className="h-[40px] w-[40px] rounded-full object-cover shrink-0"
-                                                />
-                                                <div className="flex-1 min-w-0 pt-[2px]">
-                                                    <p className="text-[12px] font-[Bold] text-[#222] leading-tight">
-                                                        {agent.fullName || "—"}
-                                                    </p>
-                                                    <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px] leading-tight truncate">
-                                                        {agent.agency?.agencyName ||
-                                                            agent.email ||
-                                                            "—"}
-                                                    </p>
-                                                </div>
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="relative" ref={agencyDropdownRef}>
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setIsAgencyDropdownOpen((prev) => !prev);
-                                setIsAgentDropdownOpen(false);
-                            }}
-                            className="cursor-pointer md:w-[250px] w-full h-[40px] rounded-[15px] border border-[rgba(34,34,34,0.12)] px-[14px] text-left text-[14px] font-[Regular] flex items-center justify-between gap-[30px] bg-white"
-                        >
-                            <span
-                                className={
-                                    selectedAgency
-                                        ? "text-[#222] font-[Medium]"
-                                        : "text-[#707070]"
-                                }
+                            )}
+                        </div>
+                        {/* agency dropdown */}
+                        <div className="relative" ref={agencyDropdownRef}>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsAgencyDropdownOpen((prev) => !prev);
+                                    setIsAgentDropdownOpen(false);
+                                }}
+                                className="cursor-pointer md:w-[250px] w-full h-[40px] rounded-[15px] border border-[rgba(34,34,34,0.12)] px-[14px] text-left text-[14px] font-[Regular] flex items-center justify-between gap-[30px] bg-white"
                             >
-                                {selectedAgency?.agencyName || "Select agency"}
-                            </span>
-                            <DownArrowIcon
-                                width={11}
-                                height={7}
-                                className={`shrink-0 transition-transform duration-200 ${isAgencyDropdownOpen ? "rotate-180" : ""}`}
-                            />
-                        </button>
-                        {isAgencyDropdownOpen && (
-                            <div className="absolute left-0 right-0 top-full z-40 w-[250px] mt-[8px] rounded-[10px] bg-white py-[12px] shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
-                                <div className="px-[12px] mb-[10px]">
-                                    <div className="flex items-center gap-[10px] h-[40px] rounded-[10px] px-[12px] bg-white shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
-                                        <SearchIcon className="text-[#707070] shrink-0" />
-                                        <input
-                                            type="search"
-                                            value={agencySearch}
-                                            onChange={(e) => setAgencySearch(e.target.value)}
-                                            placeholder="Search agency"
-                                            className="w-full bg-transparent text-[13px] font-[Regular] text-[#222] placeholder:text-[#94A3B8] focus:outline-none"
-                                        />
+                                <span
+                                    className={
+                                        selectedAgency
+                                            ? "text-[#222] font-[Medium]"
+                                            : "text-[#707070]"
+                                    }
+                                >
+                                    {selectedAgency?.agencyName || "Select agency"}
+                                </span>
+                                <DownArrowIcon
+                                    width={11}
+                                    height={7}
+                                    className={`shrink-0 transition-transform duration-200 ${isAgencyDropdownOpen ? "rotate-180" : ""}`}
+                                />
+                            </button>
+                            {isAgencyDropdownOpen && (
+                                <div className="absolute left-0 right-0 top-full z-40 w-[250px] mt-[8px] rounded-[10px] bg-white py-[12px] shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
+                                    <div className="px-[12px] mb-[10px]">
+                                        <div className="flex items-center gap-[10px] h-[40px] rounded-[10px] px-[12px] bg-white shadow-[0_6px_18px_0_rgba(0,0,0,0.15)]">
+                                            <SearchIcon className="text-[#707070] shrink-0" />
+                                            <input
+                                                type="search"
+                                                value={agencySearch}
+                                                onChange={(e) => setAgencySearch(e.target.value)}
+                                                placeholder="Search agency"
+                                                className="w-full bg-transparent text-[13px] font-[Regular] text-[#222] placeholder:text-[#94A3B8] focus:outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="max-h-[200px] overflow-y-auto px-[12px] scrollbar-hide">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedAgency(null);
+                                                setIsAgencyDropdownOpen(false);
+                                                setAgencySearch("");
+                                            }}
+                                            className="w-full text-left py-[10px] text-[12px] font-[Medium] text-[#707070] border-b border-[rgba(34,34,34,0.08)]"
+                                        >
+                                            All agencies
+                                        </button>
+                                        {filteredAgency.length === 0 ? (
+                                            <p className="text-[12px] text-[#707070] py-[12px] text-center">
+                                                No agency found
+                                            </p>
+                                        ) : (
+                                            filteredAgency.map((agency) => (
+                                                <button
+                                                    key={agency._id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedAgency(agency);
+                                                        setIsAgencyDropdownOpen(false);
+                                                        setAgencySearch("");
+                                                    }}
+                                                    className="w-full text-left flex gap-[12px] items-start py-[12px] border-b border-[rgba(34,34,34,0.08)] rounded-[6px] px-[4px] -mx-[4px]"
+                                                >
+                                                    <img
+                                                        src={resolveProfileSrc(
+                                                            agency.profilePicture,
+                                                            agencyImgBaseUrl,
+                                                            agency.profilePictureUrl
+                                                        )}
+                                                        alt=""
+                                                        className="h-[40px] w-[40px] rounded-full object-cover shrink-0"
+                                                    />
+                                                    <div className="flex-1 min-w-0 pt-[2px]">
+                                                        <p className="text-[12px] font-[Bold] text-[#222] leading-tight">
+                                                            {agency.agencyName || "—"}
+                                                        </p>
+                                                        <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px] leading-tight truncate">
+                                                            {agency?.email || "—"}
+                                                        </p>
+                                                    </div>
+                                                </button>
+                                            ))
+                                        )}
                                     </div>
                                 </div>
-                                <div className="max-h-[200px] overflow-y-auto px-[12px] scrollbar-hide">
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedAgency(null);
-                                            setIsAgencyDropdownOpen(false);
-                                            setAgencySearch("");
-                                        }}
-                                        className="w-full text-left py-[10px] text-[12px] font-[Medium] text-[#707070] border-b border-[rgba(34,34,34,0.08)]"
-                                    >
-                                        All agencies
-                                    </button>
-                                    {filteredAgency.length === 0 ? (
-                                        <p className="text-[12px] text-[#707070] py-[12px] text-center">
-                                            No agency found
-                                        </p>
-                                    ) : (
-                                        filteredAgency.map((agency) => (
-                                            <button
-                                                key={agency._id}
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedAgency(agency);
-                                                    setIsAgencyDropdownOpen(false);
-                                                    setAgencySearch("");
-                                                }}
-                                                className="w-full text-left flex gap-[12px] items-start py-[12px] border-b border-[rgba(34,34,34,0.08)] rounded-[6px] px-[4px] -mx-[4px]"
-                                            >
-                                                <img
-                                                    src={resolveProfileSrc(
-                                                        agency.profilePicture,
-                                                        agencyImgBaseUrl,
-                                                        agency.profilePictureUrl
-                                                    )}
-                                                    alt=""
-                                                    className="h-[40px] w-[40px] rounded-full object-cover shrink-0"
-                                                />
-                                                <div className="flex-1 min-w-0 pt-[2px]">
-                                                    <p className="text-[12px] font-[Bold] text-[#222] leading-tight">
-                                                        {agency.agencyName || "—"}
-                                                    </p>
-                                                    <p className="text-[12px] font-[Regular] text-[#707070] mt-[4px] leading-tight truncate">
-                                                        {agency?.email ||"—"}
-                                                    </p>
-                                                </div>
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -874,11 +919,10 @@ function ListingProperty() {
                                         key={chip.value}
                                         type="button"
                                         onClick={() => setSelectedChip(chip.value)}
-                                        className={`rounded-full px-[16px] h-[33px] text-[12px] font-[SemiBold] ${
-                                            selectedChip === chip.value
-                                                ? "bg-[#222] text-white"
-                                                : "bg-white border border-[rgba(34,34,34,0.10)] text-[#222]"
-                                        }`}
+                                        className={`rounded-full px-[16px] h-[33px] text-[12px] font-[SemiBold] ${selectedChip === chip.value
+                                            ? "bg-[#222] text-white"
+                                            : "bg-white border border-[rgba(34,34,34,0.10)] text-[#222]"
+                                            }`}
                                     >
                                         {chip.label}
                                     </button>
@@ -948,11 +992,10 @@ function ListingProperty() {
                                                 setSortBy(opt.value);
                                                 setIsSortOpen(false);
                                             }}
-                                            className={`w-full px-[14px] py-[9px] text-left text-[12px] font-[Medium] hover:bg-[#F5F5F5] ${
-                                                sortBy === opt.value
-                                                    ? "text-[#0832AE]"
-                                                    : "text-[#222]"
-                                            }`}
+                                            className={`w-full px-[14px] py-[9px] text-left text-[12px] font-[Medium] hover:bg-[#F5F5F5] ${sortBy === opt.value
+                                                ? "text-[#0832AE]"
+                                                : "text-[#222]"
+                                                }`}
                                         >
                                             {opt.name}
                                         </button>
