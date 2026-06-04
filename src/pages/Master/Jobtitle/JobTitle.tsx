@@ -11,7 +11,7 @@ import type { JobTitleListCounts, JobTitleRecord } from "../../../types/api";
 import JobTitleModal, { type JobTitleFormPayload } from "./JobTitleModal";
 import { formatJobTitleDate } from "./jobTitleData";
 
-const tableGrid = "grid-cols-[1.2fr_1.6fr_0.75fr_0.9fr_0.9fr_0.7fr]";
+const tableGrid = "grid-cols-[1.2fr_1.6fr_0.75fr_0.9fr_0.7fr]";
 const ITEMS_PER_PAGE = 5;
 const SEARCH_DEBOUNCE_MS = 400;
 const statusFilterOptions = ["all", "active", "inactive"] as const;
@@ -285,8 +285,8 @@ function JobTitle() {
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Title</p>
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Description</p>
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Status</p>
-                                <p className="text-[14px] font-[SemiBold] text-[#222]">Created</p>
-                                <p className="text-[14px] font-[SemiBold] text-[#222]">Updated</p>
+                                {/* <p className="text-[14px] font-[SemiBold] text-[#222]">Created</p> */}
+                                <p className="text-[14px] font-[SemiBold] text-[#222]">updatedAt</p>
                                 <p className="text-[14px] font-[SemiBold] text-[#222]">Actions</p>
                             </div>
 
@@ -312,9 +312,9 @@ function JobTitle() {
                                                 {row.description?.trim() || "—"}
                                             </p>
                                             <StatusBadge isActive={row.isActive !== false} />
-                                            <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                                            {/* <p className="text-[12px] font-[Regular] text-[#222] truncate">
                                                 {formatJobTitleDate(row.createdAt)}
-                                            </p>
+                                            </p> */}
                                             <p className="text-[12px] font-[Regular] text-[#222] truncate">
                                                 {formatJobTitleDate(row.updatedAt)}
                                             </p>

@@ -12,7 +12,7 @@ import { formatJobTitleDate } from "../Jobtitle/jobTitleData";
 import ListingTypeModal, { type ListingTypeFormPayload } from "./ListingTypeModal";
 
 const tableGrid =
-  "grid-cols-[minmax(100px,1.1fr)_1fr_0.85fr_0.75fr_0.9fr_0.9fr_0.65fr]";
+  "grid-cols-[minmax(100px,1.1fr)_1fr_0.85fr_0.75fr_0.9fr_0.65fr]";
 const ITEMS_PER_PAGE = 5;
 const SEARCH_DEBOUNCE_MS = 400;
 const statusFilterOptions = ["all", "active", "inactive"] as const;
@@ -336,8 +336,8 @@ function ListingTypePage() {
                 <p className="text-[14px] font-[SemiBold] text-[#222]">Name</p>
                 <p className="text-[14px] font-[SemiBold] text-[#222]">Category</p>
                 <p className="text-[14px] font-[SemiBold] text-[#222]">Status</p>
-                <p className="text-[14px] font-[SemiBold] text-[#222]">Created</p>
-                <p className="text-[14px] font-[SemiBold] text-[#222]">Updated</p>
+                {/* <p className="text-[14px] font-[SemiBold] text-[#222]">Created</p> */}
+                <p className="text-[14px] font-[SemiBold] text-[#222]">updatedAt</p>
                 <p className="text-[14px] font-[SemiBold] text-[#222]">Actions</p>
               </div>
 
@@ -364,9 +364,9 @@ function ListingTypePage() {
                         {row.category || "—"}
                       </p>
                       <StatusBadge isActive={row.isActive !== false} />
-                      <p className="text-[12px] font-[Regular] text-[#222] truncate">
+                      {/* <p className="text-[12px] font-[Regular] text-[#222] truncate">
                         {formatJobTitleDate(row.createdAt)}
-                      </p>
+                      </p> */}
                       <p className="text-[12px] font-[Regular] text-[#222] truncate">
                         {formatJobTitleDate(row.updatedAt)}
                       </p>

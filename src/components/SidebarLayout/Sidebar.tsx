@@ -22,6 +22,9 @@ const MASTER_DATA_PATHS = [
     "/amenities",
     "/jobtitles",
     "/languages",
+    "/countries",
+    "/propertylocations",
+    "/projectlocations",
 ];
 
 const LISTING_MANAGEMENT_PATHS = [
@@ -104,6 +107,9 @@ const navItems: NavItem[] = [
             { path: "/amenities", label: "Amenities" },
             { path: "/jobtitles", label: "Agent Jobtitles" },
             { path: "/languages", label: "Agent Languages" },
+            { path: "/countries", label: "Countries" },
+            { path: "/propertylocations", label: "Property Locations" },
+            { path: "/projectlocations", label: "Project Locations" },
         ]
     },
     {

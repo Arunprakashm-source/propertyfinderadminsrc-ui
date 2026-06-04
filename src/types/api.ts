@@ -326,6 +326,99 @@ export type LanguagesListResponse = {
   counts?: LanguageListCounts;
 };
 
+export type CountryCurrency = {
+  code?: string;
+  symbol?: string;
+};
+
+export type CountryRecord = {
+  _id: string;
+  name: string;
+  code: string;
+  phoneCode?: string;
+  flag?: string;
+  currency?: CountryCurrency;
+  isActive: boolean;
+  displayOrder?: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type CountryListCounts = {
+  totalCountries: number;
+  activeCountries: number;
+  inactiveCountries: number;
+};
+
+export type CountriesListPagination = {
+  currentPage: number;
+  totalPages: number;
+  totalCountries: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type CountriesListResponse = {
+  countries: CountryRecord[];
+  pagination: CountriesListPagination;
+  counts?: CountryListCounts;
+};
+
+export type PropertyLocationRecord = {
+  _id: string;
+  cityKey: string;
+  displayName: string;
+  propertyCount: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ProjectLocationRecord = {
+  _id: string;
+  cityKey: string;
+  displayName: string;
+  projectCount: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+/** @deprecated Use PropertyLocationRecord or ProjectLocationRecord */
+export type ListingSearchCityRecord = PropertyLocationRecord & {
+  projectCount?: number;
+};
+
+export type PropertyLocationListCounts = {
+  totalLocations: number;
+  withPropertyListings?: number;
+};
+
+export type ProjectLocationListCounts = {
+  totalLocations: number;
+  withProjectListings?: number;
+};
+
+export type ListingSearchCitiesListPagination = {
+  currentPage: number;
+  totalPages: number;
+  totalLocations: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type PropertyLocationsListResponse = {
+  propertyLocations: PropertyLocationRecord[];
+  pagination: ListingSearchCitiesListPagination;
+  counts?: PropertyLocationListCounts;
+};
+
+export type ProjectLocationsListResponse = {
+  projectLocations: ProjectLocationRecord[];
+  pagination: ListingSearchCitiesListPagination;
+  counts?: ProjectLocationListCounts;
+};
+
 export type PropertyTypeRecord = PropertyTypeMasterItem & {
   description?: string;
   totalListings?: number;

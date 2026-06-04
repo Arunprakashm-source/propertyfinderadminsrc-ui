@@ -6,13 +6,13 @@ import Pagenation from "../../../components/Pagenation/Pagenation";
 import Loader from "../../../components/Loader/loader";
 import { useToast } from "../../../context/ToastContext";
 import { getApiErrorMessage } from "../../../services/apiClient";
-import { languagesService } from "../../../services/languagesService";
-import type { LanguageListCounts, LanguageRecord } from "../../../types/api";
-import LanguagesModal, { type LanguageFormPayload } from "./LanguagesModal";
+import { countriesService } from "../../../services/countriesService";
+import type { CountryListCounts, CountryRecord } from "../../../types/api";
+import CountriesModal, { type CountryFormPayload } from "./CountriesModal";
 import { formatJobTitleDate } from "../Jobtitle/jobTitleData";
 
 const tableGrid =
-  "grid-cols-[minmax(100px,1.2fr)_0.55fr_1.1fr_0.75fr_0.9fr_0.7fr]";
+  "grid-cols-[48px_minmax(90px,1fr)_0.5fr_0.65fr_0.7fr_0.45fr_0.75fr_0.9fr_0.7fr]";
 const ITEMS_PER_PAGE = 5;
 const SEARCH_DEBOUNCE_MS = 400;
 const statusFilterOptions = ["all", "active", "inactive"] as const;
@@ -32,11 +32,11 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
   );
 }
 
-function StatCards({ counts }: { counts?: LanguageListCounts }) {
+function StatCards({ counts }: { counts?: CountryListCounts }) {
   const stats = [
-    { label: "Total", value: counts?.totalLanguages ?? 0, accent: "#222" },
-    { label: "Active", value: counts?.activeLanguages ?? 0, accent: "#00A663" },
-    { label: "Inactive", value: counts?.inactiveLanguages ?? 0, accent: "#EA3934" },
+    { label: "Total", value: counts?.totalCountries ?? 0, accent: "#222" },
+    { label: "Active", value: counts?.activeCountries ?? 0, accent: "#00A663" },
+    { label: "Inactive", value: counts?.inactiveCountries ?? 0, accent: "#EA3934" },
   ];
 
   return (
@@ -56,10 +56,17 @@ function StatCards({ counts }: { counts?: LanguageListCounts }) {
   );
 }
 
-function LanguagesPage() {
+function formatCurrency(row: CountryRecord) {
+  const c = row.currency;
+  if (!c?.code && !c?.symbol) return "—";
+  if (c.code && c.symbol) return `${c.code} (${c.symbol})`;
+  return c.code || c.symbol || "—";
+}
+
+function CountriesPage() {
   const { push } = useToast();
-  const [rows, setRows] = useState<LanguageRecord[]>([]);
-  const [listCounts, setListCounts] = useState<LanguageListCounts>();
+  const [rows, setRows] = useState<CountryRecord[]>([]);
+  const [listCounts, setListCounts] = useState<CountryListCounts>();
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -69,7 +76,7 @@ function LanguagesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<LanguageRecord | null>(null);
+  const [editingRecord, setEditingRecord] = useState<CountryRecord | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const statusRef = useRef<HTMLDivElement>(null);
 
@@ -100,7 +107,7 @@ function LanguagesPage() {
   const fetchRows = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await languagesService.listLanguages({
+      const data = await countriesService.listCountries({
         page: currentPage,
         limit: ITEMS_PER_PAGE,
         search: debouncedSearch || undefined,
@@ -111,15 +118,15 @@ function LanguagesPage() {
               ? false
               : undefined,
       });
-      setRows(data.languages ?? []);
+      setRows(data.countries ?? []);
       setTotalPages(Math.max(1, data.pagination?.totalPages ?? 1));
-      setTotalItems(data.pagination?.totalLanguages ?? 0);
+      setTotalItems(data.pagination?.totalCountries ?? 0);
       setListCounts(data.counts);
     } catch (error) {
       push({
         type: "error",
-        title: "Failed to load languages",
-        description: getApiErrorMessage(error, "Unable to fetch languages."),
+        title: "Failed to load countries",
+        description: getApiErrorMessage(error, "Unable to fetch countries."),
       });
       setRows([]);
       setTotalPages(1);
@@ -139,27 +146,46 @@ function LanguagesPage() {
     setEditingRecord(null);
   };
 
-  const handleSave = async (payload: LanguageFormPayload, editingId?: string) => {
+  const buildApiPayload = (payload: CountryFormPayload) => {
+    const order =
+      payload.displayOrder.trim() === ""
+        ? undefined
+        : Number.parseInt(payload.displayOrder, 10);
+    const currency =
+      payload.currencyCode || payload.currencySymbol
+        ? {
+            code: payload.currencyCode || undefined,
+            symbol: payload.currencySymbol || undefined,
+          }
+        : undefined;
+
+    return {
+      name: payload.name,
+      code: payload.code,
+      phoneCode: payload.phoneCode || undefined,
+      flag: payload.flag || undefined,
+      currency,
+      isActive: payload.isActive,
+      displayOrder: Number.isFinite(order) ? order : undefined,
+    };
+  };
+
+  const handleSave = async (payload: CountryFormPayload, editingId?: string) => {
     try {
-      const body = {
-        name: payload.name,
-        code: payload.code || undefined,
-        nativeName: payload.nativeName || undefined,
-        isActive: payload.isActive,
-      };
+      const body = buildApiPayload(payload);
       if (editingId) {
-        await languagesService.updateLanguage(editingId, body);
+        await countriesService.updateCountry(editingId, body);
         push({
           type: "success",
-          title: "Language updated",
+          title: "Country updated",
           description: "Changes saved successfully.",
         });
       } else {
-        await languagesService.createLanguage(body);
+        await countriesService.createCountry(body);
         push({
           type: "success",
-          title: "Language created",
-          description: "New language added successfully.",
+          title: "Country created",
+          description: "New country added successfully.",
         });
       }
       setRefreshKey((k) => k + 1);
@@ -167,14 +193,14 @@ function LanguagesPage() {
       push({
         type: "error",
         title: editingId ? "Update failed" : "Create failed",
-        description: getApiErrorMessage(error, "Could not save language."),
+        description: getApiErrorMessage(error, "Could not save country."),
       });
     }
   };
 
-  const handleDelete = async (record: LanguageRecord) => {
+  const handleDelete = async (record: CountryRecord) => {
     const result = await Swal.fire({
-      title: "Delete language?",
+      title: "Delete country?",
       text: `Remove "${record.name}"? This cannot be undone.`,
       icon: "warning",
       showCancelButton: true,
@@ -186,10 +212,10 @@ function LanguagesPage() {
     if (!result.isConfirmed) return;
 
     try {
-      await languagesService.deleteLanguage(record._id);
+      await countriesService.deleteCountry(record._id);
       push({
         type: "success",
-        title: "Language deleted",
+        title: "Country deleted",
         description: `${record.name} has been removed.`,
       });
       setRefreshKey((k) => k + 1);
@@ -197,14 +223,14 @@ function LanguagesPage() {
       push({
         type: "error",
         title: "Delete failed",
-        description: getApiErrorMessage(error, "Could not delete language."),
+        description: getApiErrorMessage(error, "Could not delete country."),
       });
     }
   };
 
   return (
     <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
-      <Header title="Languages" showBack={false} onBackClick={() => {}} />
+      <Header title="Countries" showBack={false} onBackClick={() => {}} />
 
       <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
         <StatCards counts={listCounts} />
@@ -217,7 +243,7 @@ function LanguagesPage() {
                 type="search"
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Search name, code, or native name"
+                placeholder="Search name, code, phone, currency"
                 className="w-full bg-transparent text-[12px] font-[Regular] text-[#222] placeholder:text-[#707070] focus:outline-none"
               />
             </div>
@@ -259,7 +285,7 @@ function LanguagesPage() {
             </div>
           </div>
 
-          <button
+          {/* <button
             type="button"
             onClick={() => {
               setEditingRecord(null);
@@ -268,19 +294,22 @@ function LanguagesPage() {
             className="h-[40px] px-[18px] rounded-[15px] bg-[#6A3CA8] text-white text-[13px] font-[SemiBold] inline-flex items-center gap-[8px] cursor-pointer shrink-0"
           >
             <PlusUserIcon width={16} height={16} className="text-white" />
-            Add Language
-          </button>
+            Add Country
+          </button> */}
         </div>
 
         <div className="overflow-x-auto w-full scrollbar-hide mb-[30px]">
-          <div className="min-w-[960px]">
+          <div className="min-w-[1100px]">
             <div className="rounded-[10px] border border-[rgba(34,34,34,0.08)] overflow-hidden bg-white">
               <div
-                className={`grid ${tableGrid} gap-[12px] items-center px-[14px] py-[12px] bg-[#F5F5F5] border-b border-[rgba(34,34,34,0.08)]`}
+                className={`grid ${tableGrid} gap-[10px] items-center px-[14px] py-[12px] bg-[#F5F5F5] border-b border-[rgba(34,34,34,0.08)]`}
               >
+                <p className="text-[14px] font-[SemiBold] text-[#222]">Flag</p>
                 <p className="text-[14px] font-[SemiBold] text-[#222]">Name</p>
                 <p className="text-[14px] font-[SemiBold] text-[#222]">Code</p>
-                <p className="text-[14px] font-[SemiBold] text-[#222]">Native name</p>
+                <p className="text-[14px] font-[SemiBold] text-[#222]">Phone</p>
+                <p className="text-[14px] font-[SemiBold] text-[#222]">Currency</p>
+                <p className="text-[14px] font-[SemiBold] text-[#222]">Order</p>
                 <p className="text-[14px] font-[SemiBold] text-[#222]">Status</p>
                 {/* <p className="text-[14px] font-[SemiBold] text-[#222]">Created</p> */}
                 <p className="text-[14px] font-[SemiBold] text-[#222]">updatedAt</p>
@@ -294,20 +323,38 @@ function LanguagesPage() {
                   </div>
                 ) : rows.length === 0 ? (
                   <p className="px-[14px] py-[24px] text-[13px] text-[#707070] text-center">
-                    No languages found
+                    No countries found
                   </p>
                 ) : (
                   rows.map((row, idx) => (
                     <div
                       key={row._id}
-                      className={`grid ${tableGrid} gap-[12px] items-center px-[14px] py-[12px] ${idx !== rows.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
+                      className={`grid ${tableGrid} gap-[10px] items-center px-[14px] py-[12px] ${idx !== rows.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
                     >
+                      <div className="flex items-center justify-center">
+                        {row.flag ? (
+                          <img
+                            src={row.flag}
+                            alt=""
+                            className="h-[28px] w-[40px] object-cover rounded-[4px] border border-[rgba(34,34,34,0.08)] bg-[#F5F5F5]"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.visibility = "hidden";
+                            }}
+                          />
+                        ) : (
+                          <span className="text-[11px] text-[#707070]">—</span>
+                        )}
+                      </div>
                       <p className="text-[12px] font-[SemiBold] text-[#222] truncate">{row.name}</p>
+                      <p className="text-[12px] font-[Regular] text-[#222]">{row.code}</p>
                       <p className="text-[12px] font-[Regular] text-[#222] truncate">
-                        {row.code || "—"}
+                        {row.phoneCode || "—"}
                       </p>
                       <p className="text-[12px] font-[Regular] text-[#707070] truncate">
-                        {row.nativeName?.trim() || "—"}
+                        {formatCurrency(row)}
+                      </p>
+                      <p className="text-[12px] font-[Regular] text-[#222]">
+                        {row.displayOrder ?? "—"}
                       </p>
                       <StatusBadge isActive={row.isActive !== false} />
                       {/* <p className="text-[12px] font-[Regular] text-[#222] truncate">
@@ -328,14 +375,14 @@ function LanguagesPage() {
                         >
                           <EditIcon width={20} height={20} />
                         </button>
-                        <button
+                        {/* <button
                           type="button"
                           className="cursor-pointer p-[6px]"
                           aria-label="Delete"
                           onClick={() => handleDelete(row)}
                         >
                           <TrashIcon width={20} height={20} />
-                        </button>
+                        </button> */}
                       </div>
                     </div>
                   ))
@@ -354,7 +401,7 @@ function LanguagesPage() {
         />
       </div>
 
-      <LanguagesModal
+      <CountriesModal
         isOpen={isModalOpen}
         onClose={closeModal}
         editingRecord={editingRecord}
@@ -364,4 +411,4 @@ function LanguagesPage() {
   );
 }
 
-export default LanguagesPage;
+export default CountriesPage;

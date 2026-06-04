@@ -39,6 +39,9 @@ import JobTitle from "./pages/Master/Jobtitle/JobTitle";
 import PropertyTypePage from "./pages/Master/PropertyType/PropertyType";
 import ListingTypePage from "./pages/Master/ListingType/ListingType";
 import LanguagesPage from "./pages/Master/Languages/Languages";
+import CountriesPage from "./pages/Master/Countries/Countries";
+import PropertyLocationPage from "./pages/Master/PropertyLocation/PropertyLocation";
+import ProjectLocationPage from "./pages/Master/ProjectLocation/ProjectLocation";
 function App() {
 
   return (
@@ -71,6 +74,9 @@ function App() {
               <Route path="/propertytypes" element={<PropertyTypePage />} />
               <Route path="/listingtypes" element={<ListingTypePage />} />
               <Route path="/languages" element={<LanguagesPage />} />
+              <Route path="/countries" element={<CountriesPage />} />
+              <Route path="/propertylocations" element={<PropertyLocationPage />} />
+              <Route path="/projectlocations" element={<ProjectLocationPage />} />
               <Route path="/reportsmanagement" element={<ReportManagement />} />
               <Route path="/reportsmanagementdetail" element={<ReportManagementDetail />} />
               <Route path="/cmsaboutus" element={<AboutUsSettings />} />
