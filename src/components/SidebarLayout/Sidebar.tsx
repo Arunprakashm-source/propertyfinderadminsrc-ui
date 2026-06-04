@@ -16,6 +16,57 @@ type NavItem = {
     activePaths?: string[];
 };
 
+const MASTER_DATA_PATHS = [
+    "/listingtypes",
+    "/propertytypes",
+    "/amenities",
+    "/jobtitles",
+    "/languages",
+];
+
+const LISTING_MANAGEMENT_PATHS = [
+    "/listingproperty",
+    "/listingproject",
+    "/listingprojectinquiry",
+    "/listingpropertyinquiry",
+];
+
+function getSubItemActivePaths(path: string): string[] {
+    if (path === "/useraccount") return ["/useraccount", "/useraccountdetail"];
+    if (path === "/developeraccount")
+        return ["/developeraccount", "/developeraccountdetail", "/developeraccountview"];
+    if (path === "/agencyaccount")
+        return ["/agencyaccount", "/agencyaccountdetail", "/agencyaccountview"];
+    if (path === "/agentaccount")
+        return ["/agentaccount", "/agentaccountdetail", "/agentaccountview"];
+    if (path === "/amenities") return ["/amenities", "/amenitiesdetail"];
+    if (path === "/listingproperty")
+        return ["/listingproperty", "/listingpropertydetail"];
+    if (path === "/listingproject")
+        return ["/listingproject", "/listingprojectdetail"];
+    if (path === "/cmsteam") return ["/cmsteam", "/cmsteamdetail"];
+    if (path === "/cmsblogs") return ["/cmsblogs", "/cmsblogdetail"];
+    return [path];
+}
+
+function pathnameMatchesAny(pathname: string, paths: string[]) {
+    return paths.some((p) => matchPath({ path: p, end: true }, pathname) != null);
+}
+
+function isNavSectionActive(item: NavItem, pathname: string): boolean {
+    const subMatch = item.subItems?.some((sub) =>
+        pathnameMatchesAny(pathname, getSubItemActivePaths(sub.path))
+    );
+    if (subMatch) return true;
+    if (item.path === "/listing") {
+        return pathnameMatchesAny(pathname, LISTING_MANAGEMENT_PATHS);
+    }
+    if (item.path === "/Master") {
+        return pathnameMatchesAny(pathname, MASTER_DATA_PATHS);
+    }
+    return pathname.startsWith(item.path);
+}
+
 const navItems: NavItem[] = [
     { icon: DashboardIcon, path: "/dashboard", label: "Dashboard" },
     {
@@ -48,8 +99,11 @@ const navItems: NavItem[] = [
         label: "Master Data",
         hasDropdown: true,
         subItems: [
+            { path: "/listingtypes", label: "Listing Types" },
+            { path: "/propertytypes", label: "Property Types" },
             { path: "/amenities", label: "Amenities" },
-            { path: "/jobtitles", label: "Job Titles" },
+            { path: "/jobtitles", label: "Agent Jobtitles" },
+            { path: "/languages", label: "Agent Languages" },
         ]
     },
     {
@@ -117,19 +171,8 @@ function Sidebar() {
         const newDropdowns: Record<string, boolean> = {};
 
         navItems.forEach((item) => {
-            if (item.hasDropdown) {
-
-                // Parent match
-                const isParentMatch = location.pathname.startsWith(item.path);
-
-                // Sub item match
-                const isSubMatch = item.subItems?.some((subItem) =>
-                    location.pathname.startsWith(subItem.path)
-                );
-
-                if (isParentMatch || isSubMatch) {
-                    newDropdowns[item.path] = true;
-                }
+            if (item.hasDropdown && isNavSectionActive(item, location.pathname)) {
+                newDropdowns[item.path] = true;
             }
         });
 
@@ -179,9 +222,10 @@ function Sidebar() {
                     const pathsToMatch = item.activePaths ?? [item.path];
                     const isItemActive = pathsToMatch.some((p) => matchPath({ path: p, end: true }, location.pathname) != null);
                     const isDirectMatch = matchPath({ path: item.path, end: true }, location.pathname) != null;
-                    const isParentPathMatch = location.pathname.startsWith(item.path);
                     const isDropdownOpen = openDropdowns[item.path] || false;
-                    const isActiveParent = isDirectMatch || (item.hasDropdown && isParentPathMatch);
+                    const isActiveParent =
+                        isDirectMatch ||
+                        (item.hasDropdown && isNavSectionActive(item, location.pathname));
                     return item.hasDropdown ? (
                         <div key={index} className={`flex flex-col w-full p-[6px] rounded-[18px] transition-colors ${isDropdownOpen ? 'bg-[#DFD3EB]' : isActiveParent ? 'bg-[#DFD3EB]' : 'bg-transparent hover:bg-[#DFD3EB]'}`}>
                             <Link
@@ -223,33 +267,12 @@ function Sidebar() {
                             {isDropdownOpen && item.subItems && (
                                 <div className="flex flex-col gap-[6px]">
                                     {item.subItems.map((subItem, subIndex) => {
-                                        const subItemActivePaths =
-                                            subItem.path === "/useraccount"
-                                                ? ["/useraccount", "/useraccountdetail"]
-                                                : subItem.path === "/developeraccount"
-                                                    ? ["/developeraccount", "/developeraccountdetail", "/developeraccountview"]
-                                                    : subItem.path === "/agencyaccount"
-                                                        ? ["/agencyaccount", "/agencyaccountdetail", "/agencyaccountview"]
-                                                        : subItem.path === "/agentaccount"
-                                                            ? ["/agentaccount", "/agentaccountdetail", "/agentaccountview"]
-                                                            : subItem.path === "/amenities"
-                                                                ? ["/amenities", "/amenitiesdetail"]
-                                                                : subItem.path === "/listingproperty"
-                                                                        ? ["/listingproperty", "/listingpropertydetail"]
-                                                                        : subItem.path === "/listingproject"
-                                                                            ? ["/listingproject", "/listingprojectdetail"]
-                                                                            : subItem.path === "/listingamenities"
-                                                                                ? ["/listingamenities", "/listingamenitiesdetail"]
-                                                                                : subItem.path === "/cmsteam"
-                                                                                    ? ["/cmsteam", "/cmsteamdetail"]
-                                                                                    : subItem.path === "/cmsblogs"
-                                                                                        ? ["/cmsblogs", "/cmsblogdetail"]
-                                                                                        : [subItem.path];
+                                        const subItemActivePaths = getSubItemActivePaths(subItem.path);
                                         const isSubActive = subItemActivePaths.some(
                                             (p) => matchPath({ path: p, end: true }, location.pathname) != null
                                         );
                                         // Default "Project allocation" to active if no sub-item is active, just to match the screenshot state exactly if we are at the parent
-                                        const looksActive = isSubActive || (isParentPathMatch && !isDirectMatch && isSubActive) || (isDirectMatch && subIndex === 0);
+                                        const looksActive = isSubActive;
                                         return (
                                             <NavLink
                                                 key={subIndex}

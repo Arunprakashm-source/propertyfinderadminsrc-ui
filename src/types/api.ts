@@ -295,6 +295,93 @@ export type MasterDataJobTitlesResponse = {
   jobTitles?: JobTitleOption[];
 };
 
+export type LanguageRecord = {
+  _id: string;
+  name: string;
+  code?: string;
+  nativeName?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type LanguageListCounts = {
+  totalLanguages: number;
+  activeLanguages: number;
+  inactiveLanguages: number;
+};
+
+export type LanguagesListPagination = {
+  currentPage: number;
+  totalPages: number;
+  totalLanguages: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type LanguagesListResponse = {
+  languages: LanguageRecord[];
+  pagination: LanguagesListPagination;
+  counts?: LanguageListCounts;
+};
+
+export type PropertyTypeRecord = PropertyTypeMasterItem & {
+  description?: string;
+  totalListings?: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type PropertyTypeListCounts = {
+  totalPropertyTypes: number;
+  activePropertyTypes: number;
+  inactivePropertyTypes: number;
+};
+
+export type PropertyTypesListPagination = {
+  currentPage: number;
+  totalPages: number;
+  totalPropertyTypes: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type PropertyTypesListResponse = {
+  propertyTypes: PropertyTypeRecord[];
+  pagination: PropertyTypesListPagination;
+  counts?: PropertyTypeListCounts;
+};
+
+export type ListingTypeRecord = ListingTypeMasterItem & {
+  category?: string;
+  description?: string;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type ListingTypeListCounts = {
+  totalListingTypes: number;
+  activeListingTypes: number;
+  inactiveListingTypes: number;
+};
+
+export type ListingTypesListPagination = {
+  currentPage: number;
+  totalPages: number;
+  totalListingTypes: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type ListingTypesListResponse = {
+  listingTypes: ListingTypeRecord[];
+  pagination: ListingTypesListPagination;
+  counts?: ListingTypeListCounts;
+};
+
 export type AgentStatistics = {
   totalRevenueSales?: number;
   totalRevenueRent?: number;

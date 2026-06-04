@@ -36,6 +36,9 @@ import AmenitiesDetail from "./pages/Master/Amenities/AmenitiesDetail";
 import ListingProjectInquiry from "./pages/ListingManagement/ListingProjectInquiry/ListingProjectInquiry";
 import ListingPropertyInquiry from "./pages/ListingManagement/ListingPropertyInquiry/ListingPropertyInquiry";
 import JobTitle from "./pages/Master/Jobtitle/JobTitle";
+import PropertyTypePage from "./pages/Master/PropertyType/PropertyType";
+import ListingTypePage from "./pages/Master/ListingType/ListingType";
+import LanguagesPage from "./pages/Master/Languages/Languages";
 function App() {
 
   return (
@@ -65,6 +68,9 @@ function App() {
               <Route path="/amenities" element={<Amenities />} />
               <Route path="/amenitiesdetail" element={<AmenitiesDetail />} />
               <Route path="/jobtitles" element={<JobTitle />} />
+              <Route path="/propertytypes" element={<PropertyTypePage />} />
+              <Route path="/listingtypes" element={<ListingTypePage />} />
+              <Route path="/languages" element={<LanguagesPage />} />
               <Route path="/reportsmanagement" element={<ReportManagement />} />
               <Route path="/reportsmanagementdetail" element={<ReportManagementDetail />} />
               <Route path="/cmsaboutus" element={<AboutUsSettings />} />
