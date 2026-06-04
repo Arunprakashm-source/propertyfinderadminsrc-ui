@@ -257,6 +257,38 @@ export type InviteAgentResponse = {
 export type JobTitleOption = {
   _id: string;
   title?: string;
+  description?: string;
+  isActive?: boolean;
+};
+
+export type JobTitleRecord = {
+  _id: string;
+  title: string;
+  description?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type JobTitleListCounts = {
+  totalJobTitles: number;
+  activeJobTitles: number;
+  inactiveJobTitles: number;
+};
+
+export type JobTitlesListPagination = {
+  currentPage: number;
+  totalPages: number;
+  totalJobTitles: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type JobTitlesListResponse = {
+  jobTitles: JobTitleRecord[];
+  pagination: JobTitlesListPagination;
+  counts?: JobTitleListCounts;
 };
 
 export type MasterDataJobTitlesResponse = {
@@ -677,8 +709,37 @@ export type AmenityMasterItem = {
   category?: string;
   icon?: string;
   image?: string;
+  imageUrl?: string | null;
   displayOrder?: number;
   isActive?: boolean;
+};
+
+export type AmenityRecord = AmenityMasterItem & {
+  description?: string;
+  usageCount?: number;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type AmenityListCounts = {
+  totalAmenities: number;
+  activeAmenities: number;
+  inactiveAmenities: number;
+};
+
+export type AmenitiesListPagination = {
+  currentPage: number;
+  totalPages: number;
+  totalAmenities: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type AmenitiesListResponse = {
+  amenities: AmenityRecord[];
+  pagination: AmenitiesListPagination;
+  counts?: AmenityListCounts;
 };
 
 export type MasterDataAmenitiesResponse = {

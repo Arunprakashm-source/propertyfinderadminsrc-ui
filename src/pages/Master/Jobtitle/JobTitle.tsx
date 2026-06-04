@@ -1,12 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Swal from "sweetalert2";
 import { DownArrowIcon, EditIcon, PlusUserIcon, SearchIcon, TrashIcon } from "../../../assets/icons";
 import Header from "../../../components/Header/Header";
 import Pagenation from "../../../components/Pagenation/Pagenation";
+import Loader from "../../../components/Loader/loader";
+import { useToast } from "../../../context/ToastContext";
+import { getApiErrorMessage } from "../../../services/apiClient";
+import { jobTitlesService } from "../../../services/jobTitlesService";
+import type { JobTitleListCounts, JobTitleRecord } from "../../../types/api";
 import JobTitleModal, { type JobTitleFormPayload } from "./JobTitleModal";
-import { formatJobTitleDate, jobTitlesSeed, type JobTitleRecord } from "./jobTitleData";
+import { formatJobTitleDate } from "./jobTitleData";
 
 const tableGrid = "grid-cols-[1.2fr_1.6fr_0.75fr_0.9fr_0.9fr_0.7fr]";
 const ITEMS_PER_PAGE = 5;
+const SEARCH_DEBOUNCE_MS = 400;
 const statusFilterOptions = ["all", "active", "inactive"] as const;
 type StatusFilter = (typeof statusFilterOptions)[number];
 
@@ -28,11 +35,11 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
     );
 }
 
-function StatCards({ items }: { items: JobTitleRecord[] }) {
+function StatCards({ counts }: { counts?: JobTitleListCounts }) {
     const stats = [
-        { label: "Total", value: items.length, accent: "#222" },
-        { label: "Active", value: items.filter((i) => i.isActive).length, accent: "#00A663" },
-        { label: "Inactive", value: items.filter((i) => !i.isActive).length, accent: "#EA3934" },
+        { label: "Total", value: counts?.totalJobTitles ?? 0, accent: "#222" },
+        { label: "Active", value: counts?.activeJobTitles ?? 0, accent: "#00A663" },
+        { label: "Inactive", value: counts?.inactiveJobTitles ?? 0, accent: "#EA3934" },
     ];
 
     return (
@@ -53,13 +60,20 @@ function StatCards({ items }: { items: JobTitleRecord[] }) {
 }
 
 function JobTitle() {
-    const [rows, setRows] = useState<JobTitleRecord[]>(() => [...jobTitlesSeed]);
-    const [search, setSearch] = useState("");
+    const { push } = useToast();
+    const [rows, setRows] = useState<JobTitleRecord[]>([]);
+    const [listCounts, setListCounts] = useState<JobTitleListCounts>();
+    const [loading, setLoading] = useState(true);
+    const [searchInput, setSearchInput] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [isStatusOpen, setIsStatusOpen] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalItems, setTotalItems] = useState(0);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingRecord, setEditingRecord] = useState<JobTitleRecord | null>(null);
+    const [refreshKey, setRefreshKey] = useState(0);
     const statusRef = useRef<HTMLDivElement>(null);
 
     const statusLabel =
@@ -70,6 +84,14 @@ function JobTitle() {
                 : "Inactive";
 
     useEffect(() => {
+        const timer = window.setTimeout(() => {
+            setDebouncedSearch(searchInput.trim());
+            setCurrentPage(1);
+        }, SEARCH_DEBOUNCE_MS);
+        return () => window.clearTimeout(timer);
+    }, [searchInput]);
+
+    useEffect(() => {
         const onMouseDown = (e: MouseEvent) => {
             if (statusRef.current?.contains(e.target as Node)) return;
             setIsStatusOpen(false);
@@ -77,6 +99,43 @@ function JobTitle() {
         document.addEventListener("mousedown", onMouseDown);
         return () => document.removeEventListener("mousedown", onMouseDown);
     }, []);
+
+    const fetchRows = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await jobTitlesService.listJobTitles({
+                page: currentPage,
+                limit: ITEMS_PER_PAGE,
+                search: debouncedSearch || undefined,
+                isActive:
+                    statusFilter === "active"
+                        ? true
+                        : statusFilter === "inactive"
+                            ? false
+                            : undefined,
+            });
+            setRows(data.jobTitles ?? []);
+            setTotalPages(Math.max(1, data.pagination?.totalPages ?? 1));
+            setTotalItems(data.pagination?.totalJobTitles ?? 0);
+            setListCounts(data.counts);
+        } catch (error) {
+            push({
+                type: "error",
+                title: "Failed to load job titles",
+                description: getApiErrorMessage(error, "Unable to fetch job titles."),
+            });
+            setRows([]);
+            setTotalPages(1);
+            setTotalItems(0);
+            setListCounts(undefined);
+        } finally {
+            setLoading(false);
+        }
+    }, [currentPage, debouncedSearch, statusFilter, push]);
+
+    useEffect(() => {
+        void fetchRows();
+    }, [fetchRows, refreshKey]);
 
     const openAddModal = () => {
         setEditingRecord(null);
@@ -93,65 +152,69 @@ function JobTitle() {
         setEditingRecord(null);
     };
 
-    const handleSave = (payload: JobTitleFormPayload, editingId?: string) => {
-        const now = new Date().toISOString();
-        if (editingId) {
-            setRows((prev) =>
-                prev.map((row) =>
-                    row._id === editingId
-                        ? {
-                            ...row,
-                            title: payload.title,
-                            description: payload.description,
-                            isActive: payload.isActive,
-                            updatedAt: now,
-                        }
-                        : row
-                )
-            );
-            return;
+    const handleSave = async (payload: JobTitleFormPayload, editingId?: string) => {
+        try {
+            if (editingId) {
+                await jobTitlesService.updateJobTitle(editingId, payload);
+                push({
+                    type: "success",
+                    title: "Job title updated",
+                    description: "Changes saved successfully.",
+                });
+            } else {
+                await jobTitlesService.createJobTitle(payload);
+                push({
+                    type: "success",
+                    title: "Job title created",
+                    description: "New job title added successfully.",
+                });
+            }
+            setRefreshKey((k) => k + 1);
+        } catch (error) {
+            push({
+                type: "error",
+                title: editingId ? "Update failed" : "Create failed",
+                description: getApiErrorMessage(error, "Could not save job title."),
+            });
         }
-        setRows((prev) => [
-            {
-                _id: `jt-${Date.now()}`,
-                title: payload.title,
-                description: payload.description,
-                isActive: payload.isActive,
-                createdAt: now,
-                updatedAt: now,
-            },
-            ...prev,
-        ]);
     };
 
-    const filteredRows = useMemo(() => {
-        const q = search.trim().toLowerCase();
-        return rows.filter((row) => {
-            if (statusFilter === "active" && !row.isActive) return false;
-            if (statusFilter === "inactive" && row.isActive) return false;
-            if (!q) return true;
-            return (
-                row.title.toLowerCase().includes(q) ||
-                (row.description ?? "").toLowerCase().includes(q)
-            );
+    const handleDelete = async (record: JobTitleRecord) => {
+        const result = await Swal.fire({
+            title: "Delete job title?",
+            text: `Remove "${record.title}"? This cannot be undone.`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Delete",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#EA3934",
+            reverseButtons: true,
         });
-    }, [rows, search, statusFilter]);
+        if (!result.isConfirmed) return;
 
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [search, statusFilter]);
-
-    const paginatedRows = filteredRows.slice(
-        (currentPage - 1) * ITEMS_PER_PAGE,
-        currentPage * ITEMS_PER_PAGE
-    );
+        try {
+            await jobTitlesService.deleteJobTitle(record._id);
+            push({
+                type: "success",
+                title: "Job title deleted",
+                description: `${record.title} has been removed.`,
+            });
+            setRefreshKey((k) => k + 1);
+        } catch (error) {
+            push({
+                type: "error",
+                title: "Delete failed",
+                description: getApiErrorMessage(error, "Could not delete job title."),
+            });
+        }
+    };
 
     return (
         <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
             <Header title="Job Titles" showBack={false} onBackClick={() => { }} />
 
             <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
-                <StatCards items={rows} />
+                <StatCards counts={listCounts} />
 
                 <div className="flex flex-wrap items-center justify-between gap-[10px] mb-[24px]">
                     <div className="flex flex-wrap items-center gap-[10px] flex-1 min-w-0">
@@ -159,8 +222,8 @@ function JobTitle() {
                             <SearchIcon className="text-[#707070] shrink-0" />
                             <input
                                 type="search"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
                                 placeholder="Search title or description"
                                 className="w-full bg-transparent text-[12px] font-[Regular] text-[#222] placeholder:text-[#707070] focus:outline-none"
                             />
@@ -190,6 +253,7 @@ function JobTitle() {
                                             onMouseDown={(e) => {
                                                 e.preventDefault();
                                                 setStatusFilter(opt);
+                                                setCurrentPage(1);
                                                 setIsStatusOpen(false);
                                             }}
                                             className={`w-full px-[14px] py-[9px] text-left text-[13px] font-[Medium] hover:bg-[#F5F5F5] capitalize ${statusFilter === opt ? "text-[#6A3CA8] bg-[#F5F5F5]" : "text-[#222]"}`}
@@ -227,15 +291,19 @@ function JobTitle() {
                             </div>
 
                             <div>
-                                {paginatedRows.length === 0 ? (
+                                {loading ? (
+                                    <div className="px-[14px] py-[30px] flex justify-center">
+                                        <Loader size={80} />
+                                    </div>
+                                ) : rows.length === 0 ? (
                                     <p className="px-[14px] py-[24px] text-[13px] text-[#707070] text-center">
                                         No job titles found
                                     </p>
                                 ) : (
-                                    paginatedRows.map((row, idx) => (
+                                    rows.map((row, idx) => (
                                         <div
                                             key={row._id}
-                                            className={`grid ${tableGrid} gap-[20px] items-center px-[14px] py-[12px] ${idx !== paginatedRows.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
+                                            className={`grid ${tableGrid} gap-[20px] items-center px-[14px] py-[12px] ${idx !== rows.length - 1 ? "border-b border-[rgba(34,34,34,0.08)]" : ""}`}
                                         >
                                             <p className="text-[12px] font-[SemiBold] text-[#222] truncate">
                                                 {row.title}
@@ -243,7 +311,7 @@ function JobTitle() {
                                             <p className="text-[12px] font-[Regular] text-[#707070] truncate">
                                                 {row.description?.trim() || "—"}
                                             </p>
-                                            <StatusBadge isActive={row.isActive} />
+                                            <StatusBadge isActive={row.isActive !== false} />
                                             <p className="text-[12px] font-[Regular] text-[#222] truncate">
                                                 {formatJobTitleDate(row.createdAt)}
                                             </p>
@@ -263,9 +331,7 @@ function JobTitle() {
                                                     type="button"
                                                     className="cursor-pointer p-[6px]"
                                                     aria-label="Delete"
-                                                    onClick={() =>
-                                                        console.log("Delete job title", row._id)
-                                                    }
+                                                    onClick={() => handleDelete(row)}
                                                 >
                                                     <TrashIcon width={20} height={20} />
                                                 </button>
@@ -280,7 +346,8 @@ function JobTitle() {
 
                 <Pagenation
                     currentPage={currentPage}
-                    totalItems={filteredRows.length}
+                    totalPages={totalPages}
+                    totalItems={totalItems}
                     itemsPerPage={ITEMS_PER_PAGE}
                     onPageChange={setCurrentPage}
                 />

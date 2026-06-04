@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CancelIcon } from "../../../assets/icons";
-import { formatJobTitleDate, type JobTitleRecord } from "./jobTitleData";
+import type { JobTitleRecord } from "../../../types/api";
+import { formatJobTitleDate } from "./jobTitleData";
 
 const inputClass =
     "h-[44px] w-full rounded-[10px] border border-[rgba(34,34,34,0.10)] px-[12px] text-[14px] focus:outline-none";
