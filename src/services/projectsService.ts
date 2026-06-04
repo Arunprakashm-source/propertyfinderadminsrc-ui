@@ -5,9 +5,11 @@ import type {
   DevelopersDropdownResponse,
   MasterDataAmenitiesResponse,
   MasterDataProjectLocationsResponse,
+  MasterDataPropertyClassificationResponse,
   ProjectDetailResponse,
   ProjectLocationOption,
   ProjectsListResponse,
+  PropertyTypeMasterItem,
   SupportedUrlsResponse,
 } from "../types/api";
 
@@ -78,8 +80,8 @@ export const projectsService = {
     );
   },
 
-  async getSupportedUrls(signal?: AbortSignal): Promise<SupportedUrlsResponse> {
-    return apiClient.get<SupportedUrlsResponse>("/master-data?types=supportedurls", {
+  async getSupportedUrls(signal?: AbortSignal): Promise<SupportedUrlsMasterData> {
+    return apiClient.get<SupportedUrlsMasterData>("/master-data?types=supportedurls", {
       auth: true,
       signal,
     });
@@ -122,6 +124,10 @@ export const projectsService = {
   },
 };
 
-export type SupportedUrlsMasterData = SupportedUrlsResponse;
+/** Master-data supported URLs; includes legacy lowercase keys from some API responses. */
+export type SupportedUrlsMasterData = SupportedUrlsResponse & {
+  supportedurls?: SupportedUrlsResponse["supportedUrls"];
+  items?: Record<string, unknown> | Array<Record<string, unknown>>;
+};
 
-export type { AmenityMasterItem, DeveloperDropdownItem };
+export type { AmenityMasterItem, DeveloperDropdownItem, PropertyTypeMasterItem };

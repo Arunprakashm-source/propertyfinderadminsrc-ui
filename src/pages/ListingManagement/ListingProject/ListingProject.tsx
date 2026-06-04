@@ -1,5 +1,5 @@
 import profileimg from "../../../assets/img/profileless.png";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import {
     CancelIcon,
     DownArrowIcon,
@@ -421,7 +421,7 @@ function ListingProject() {
         setActiveDatePicker(null);
     };
 
-    const clearDate = (type: "from" | "to", event: MouseEvent) => {
+    const clearDate = (type: "from" | "to", event: ReactMouseEvent<HTMLButtonElement>) => {
         event.stopPropagation();
         if (type === "from") setFromDate(null);
         else setToDate(null);

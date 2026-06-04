@@ -236,7 +236,7 @@ const EditUnitdetail = ({ projectId, unitProperties, onAfterSave, primaryActionL
             .listPropertyTypesMaster()
             .then((data) => {
                 if (!isMounted) return;
-                const propertyTypes = (Array.isArray(data) ? data : data.propertyTypes || data.propertytypes || [])
+                const propertyTypes = data
                     .filter(
                         (item: PropertyTypeMasterItem) =>
                             Boolean(item?._id && item?.name) && item.isActive !== false
@@ -326,8 +326,12 @@ const EditUnitdetail = ({ projectId, unitProperties, onAfterSave, primaryActionL
         try {
             if (floorPlanFileEntries.length > 0) {
                 const floorPlanUploadResponse = await projectsService.uploadProjectMedia(floorPlanFormData);
-                const uploadedFloorPlans = (floorPlanUploadResponse.uploads?.floorPlans || [])
-                    .map((item) => extractFilename(item.filename || item.url))
+                const rawFloorPlans = floorPlanUploadResponse.uploads?.floorPlans;
+                const uploadedFloorPlans = (Array.isArray(rawFloorPlans) ? rawFloorPlans : [])
+                    .map((item) => {
+                        const row = item as { filename?: string; url?: string };
+                        return extractFilename(row.filename || row.url);
+                    })
                     .filter((name): name is string => Boolean(name));
 
                 if (uploadedFloorPlans.length !== floorPlanFileEntries.length) {
