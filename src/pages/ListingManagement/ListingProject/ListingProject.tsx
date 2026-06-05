@@ -25,9 +25,10 @@ import type {
     AgencyDropdownItem,
     DeveloperDropdownItem,
     ProjectLocationOption,
+    ProjectsListCounts,
 } from "../../../types/api";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 const SEARCH_DEBOUNCE_MS = 400;
 const ALL_LOCATIONS = "All locations";
 
@@ -117,25 +118,21 @@ function PropertyStatusBadge({ status }: { status?: string }) {
 }
 
 function StatCards({
-    totalProjects,
-    activeProjects,
-    inactiveProjects,
-    pendingProjects,
+    counts,
+    totalFallback,
 }: {
-    totalProjects: number;
-    activeProjects: number;
-    inactiveProjects: number;
-    pendingProjects: number;
+    counts?: ProjectsListCounts;
+    totalFallback: number;
 }) {
     const stats = [
         {
             label: "Total",
-            value: totalProjects,
+            value: counts?.totalProjects ?? totalFallback,
             accent: "#222",
         },
-        { label: "Active", value: activeProjects, accent: "#00A663" },
-        { label: "Inactive", value: inactiveProjects, accent: "#EA3934" },
-        { label: "Pending", value: pendingProjects, accent: "#F59E0B" },
+        { label: "Active", value: counts?.activeProjects ?? 0, accent: "#00A663" },
+        { label: "Inactive", value: counts?.inactiveProjects ?? 0, accent: "#EA3934" },
+        { label: "Sold", value: counts?.soldProjects ?? 0, accent: "#F59E0B" },
     ];
 
     return (
@@ -273,6 +270,7 @@ function ListingProject() {
     const [currentPage, setCurrentPage] = useState(1);
     const [projects, setProjects] = useState<AdminProjectListItem[]>([]);
     const [totalProjects, setTotalProjects] = useState(0);
+    const [listCounts, setListCounts] = useState<ProjectsListCounts>();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [projectImgBaseUrl, setProjectImgBaseUrl] = useState("");
@@ -388,10 +386,12 @@ function ListingProject() {
             });
             setProjects(response.projects || []);
             setTotalProjects(response.pagination?.totalProjects ?? 0);
+            setListCounts(response.counts);
         } catch (err: unknown) {
             setError(getApiErrorMessage(err, "Failed to load projects"));
             setProjects([]);
             setTotalProjects(0);
+            setListCounts(undefined);
         } finally {
             setLoading(false);
         }
@@ -575,7 +575,7 @@ function ListingProject() {
 
             <div className="p-[20px] bg-[#fff] mt-[20px] shadow-[0px_1px_0px_rgba(17,17,26,0.05),0px_0px_8px_rgba(17,17,26,0.10)] rounded-[12px]">
 
-                <StatCards totalProjects={totalProjects} activeProjects={projects.filter((p) => p.status === "active").length} inactiveProjects={projects.filter((p) => p.status === "inactive").length} pendingProjects={projects.filter((p) => p.status === "pending").length} />
+                <StatCards counts={listCounts} totalFallback={totalProjects} />
 
                 <div className="flex flex-wrap items-center mb-[30px] gap-[10px]">
                     <div className="flex items-center gap-[10px] bg-[#F5F5F5] rounded-[15px] px-[14px] h-[40px] min-w-[200px]">

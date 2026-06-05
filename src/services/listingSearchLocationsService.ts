@@ -37,7 +37,7 @@ export const propertyLocationsService = {
   },
 
   create(payload: ListingSearchCityPayload, signal?: AbortSignal) {
-    return apiClient.post<{ propertyLocation: ListingSearchCityRecord }>(
+    return apiClient.post<{ propertyLocation: PropertyLocationRecord }>(
       "/master-data/property-locations",
       payload,
       { auth: true, signal }

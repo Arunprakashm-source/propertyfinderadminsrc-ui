@@ -31,13 +31,18 @@ import type {
 
 type ListingChip = { label: string; value: string };
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 const SORT_OPTIONS = [
     { name: "Newest", value: "newest" },
     { name: "Oldest", value: "oldest" },
+    { name: "Active", value: "active" },
+    { name: "Inactive", value: "inactive" },
+    { name: "Sold", value: "sold" },
+    { name: "Rented", value: "rented" },
+    { name: "Pending", value: "pending" },
     { name: "Price: Low to High", value: "price-asc" },
     { name: "Price: High to Low", value: "price-desc" },
-];
+] as const;
 const SEARCH_DEBOUNCE_MS = 400;
 const ALL_LOCATIONS = "All locations";
 const tableGrid =
@@ -228,11 +233,13 @@ function StatCards({
         },
         { label: "Active", value: counts?.activeProperties ?? 0, accent: "#00A663" },
         { label: "Inactive", value: counts?.inactiveProperties ?? 0, accent: "#EA3934" },
+        { label: "Sold", value: counts?.soldProperties ?? 0, accent: "#EA3934" },
+        { label: "Rented", value: counts?.rentedProperties ?? 0, accent: "#8ACBD0" },
         { label: "Pending", value: counts?.pendingProperties ?? 0, accent: "#F59E0B" },
     ];
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[14px] mb-[24px]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-[14px] mb-[24px]">
             {stats.map((s) => (
                 <div
                     key={s.label}
@@ -542,7 +549,7 @@ function ListingProperty() {
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [selectedAgent?._id, selectedAgency?._id, selectedLocation, fromDate, toDate]);
+    }, [selectedAgent?._id, selectedAgency?._id, selectedLocation, fromDate, toDate, sortBy, selectedChip]);
 
     const calendarCells = getCalendarCells(displayMonth);
 

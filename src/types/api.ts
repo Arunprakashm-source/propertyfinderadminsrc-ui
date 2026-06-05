@@ -840,9 +840,19 @@ export type PropertiesListPagination = {
   hasPrevPage: boolean;
 };
 
+export type PropertiesListCounts = {
+  totalProperties: number;
+  activeProperties: number;
+  inactiveProperties: number;
+  soldProperties: number;
+  rentedProperties: number;
+  pendingProperties: number;
+};
+
 export type PropertiesListResponse = {
   properties: AdminPropertyListItem[];
   pagination: PropertiesListPagination;
+  counts?: PropertiesListCounts;
 };
 
 export type ListingTypeMasterItem = {
@@ -1215,6 +1225,14 @@ export type AdminProjectListItem = {
   createdAt?: string;
 };
 
+export type ProjectsListCounts = {
+  totalProjects: number;
+  activeProjects: number;
+  inactiveProjects: number;
+  soldProjects: number;
+  pendingProjects: number;
+};
+
 export type ProjectsListResponse = {
   projects: AdminProjectListItem[];
   pagination: {
@@ -1225,6 +1243,7 @@ export type ProjectsListResponse = {
     hasNextPage: boolean;
     hasPrevPage: boolean;
   };
+  counts?: ProjectsListCounts;
 };
 
 export type AdminProjectDetail = Record<string, unknown> & {
