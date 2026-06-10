@@ -751,7 +751,136 @@ export type SupportedUrlsResponse = {
     agencyUrl?: { img?: string; doc?: string };
     developerUrl?: { img?: string; doc?: string };
     agentUrl?: { img?: string; doc?: string };
+    blogUrl?: { img?: string; vid?: string; doc?: string };
   };
+};
+
+export type BlogSeoFields = {
+  metaTitle: string;
+  metaDescription: string;
+  metaKeywords: string;
+};
+
+export type BlogPageSettings = {
+  pageTitle: string;
+  pageSubtitle: string;
+  featuredSectionTitle: string;
+  featuredSectionSubtitle: string;
+  itemsPerPage: number;
+  showSearch: boolean;
+  showCategoryFilters: boolean;
+  showRecentPostsSidebar: boolean;
+  enableComments: boolean;
+  seo: BlogSeoFields;
+};
+
+export type BlogSubcategoryRecord = {
+  _id?: string;
+  name: string;
+  slug: string;
+  displayOrder?: number;
+};
+
+export type BlogCategoryRecord = {
+  _id?: string;
+  name: string;
+  slug: string;
+  subcategories?: BlogSubcategoryRecord[];
+  displayOrder?: number;
+  isActive?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type BlogCategoryListCounts = {
+  totalBlogCategories?: number;
+  activeBlogCategories?: number;
+  inactiveBlogCategories?: number;
+};
+
+export type BlogCategoriesListResponse = {
+  categories: BlogCategoryRecord[];
+  pagination: {
+    currentPage: number;
+    totalPages: number;
+    totalBlogCategories: number;
+    limit: number;
+    hasNextPage?: boolean;
+    hasPrevPage?: boolean;
+  };
+  counts?: BlogCategoryListCounts;
+};
+
+export type BlogTagRecord = {
+  id: number;
+  name: string;
+  slug: string;
+};
+
+export type BlogPostRecord = {
+  id: string;
+  title: string;
+  slug: string;
+  excerpt?: string;
+  content?: string;
+  coverImage?: string;
+  categorySlug?: string;
+  subcategorySlug?: string;
+  tags?: string[];
+  authorName?: string;
+  readTime?: string;
+  readingTime?: number;
+  publishDate?: string;
+  publishedAt?: string;
+  isFeatured?: boolean;
+  isPublished?: boolean;
+  status?: string;
+  displayOrder?: number;
+  allowComments?: boolean;
+  seo?: BlogSeoFields;
+};
+
+export type BlogsAdminResponse = {
+  settings: BlogPageSettings;
+  categories: BlogCategoryRecord[];
+  tags: BlogTagRecord[];
+  posts: BlogPostRecord[];
+  post?: BlogPostRecord;
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
+};
+
+export type LegalContactBlock = {
+  supportEmail?: string;
+  sectionTitle?: string;
+};
+
+export type LegalPageSettings = {
+  termsPageTitle?: string;
+  privacyPageTitle?: string;
+  breadcrumbHomeLabel?: string;
+  defaultCountryCode?: string;
+  contactBlock?: LegalContactBlock;
+};
+
+export type LegalDocumentRecord = {
+  id?: string;
+  countryCode?: string;
+  categoryName: string;
+  slug?: string;
+  content?: string;
+  isActive?: boolean;
+  displayOrder?: number;
+};
+
+export type LegalAdminResponse = {
+  settings: LegalPageSettings;
+  countries: CountryRecord[];
+  documents: LegalDocumentRecord[];
 };
 
 export type PropertyLocationOption = {

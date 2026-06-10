@@ -42,6 +42,7 @@ import LanguagesPage from "./pages/Master/Languages/Languages";
 import CountriesPage from "./pages/Master/Countries/Countries";
 import PropertyLocationPage from "./pages/Master/PropertyLocation/PropertyLocation";
 import ProjectLocationPage from "./pages/Master/ProjectLocation/ProjectLocation";
+import BlogCategoriesPage from "./pages/Master/BlogCategories/BlogCategories";
 function App() {
 
   return (
@@ -77,6 +78,7 @@ function App() {
               <Route path="/countries" element={<CountriesPage />} />
               <Route path="/propertylocations" element={<PropertyLocationPage />} />
               <Route path="/projectlocations" element={<ProjectLocationPage />} />
+              <Route path="/blogcategories" element={<BlogCategoriesPage />} />
               <Route path="/reportsmanagement" element={<ReportManagement />} />
               <Route path="/reportsmanagementdetail" element={<ReportManagementDetail />} />
               <Route path="/cmsaboutus" element={<AboutUsSettings />} />

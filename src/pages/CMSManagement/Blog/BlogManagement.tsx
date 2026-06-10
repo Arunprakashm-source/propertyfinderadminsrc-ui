@@ -1,13 +1,15 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { EditIcon, SearchIcon, TrashIcon } from "../../../assets/icons";
 import Header from "../../../components/Header/Header";
 import Pagenation from "../../../components/Pagenation/Pagenation";
+import Loader from "../../../components/Loader/loader";
 import { useNavigate } from "react-router-dom";
-import {
-    blogCategoriesSeed,
-    blogPostsSeed,
-    defaultBlogPageSettings,
-} from "../cmsData";
+import Swal from "sweetalert2";
+import { useToast } from "../../../context/ToastContext";
+import { getApiErrorMessage } from "../../../services/apiClient";
+import { blogsService } from "../../../services/blogsService";
+import type { BlogPageSettings, BlogPostRecord } from "../../../types/api";
+import { defaultBlogPageSettings } from "../cmsData";
 import {
     SaveBar,
     SeoSection,
@@ -20,21 +22,99 @@ import {
 
 function BlogManagement() {
     const navigate = useNavigate();
-    const [settings, setSettings] = useState(defaultBlogPageSettings);
+    const { push } = useToast();
+    const [settings, setSettings] = useState<BlogPageSettings>(defaultBlogPageSettings);
+    const [categories, setCategories] = useState<{ name: string; slug: string }[]>([]);
+    const [posts, setPosts] = useState<BlogPostRecord[]>([]);
     const [search, setSearch] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
-
-    const filteredPosts = useMemo(() => {
-        return blogPostsSeed.filter((post) =>
-            post.title.toLowerCase().includes(search.toLowerCase())
-        );
-    }, [search]);
+    const [totalPages, setTotalPages] = useState(1);
+    const [loading, setLoading] = useState(true);
 
     const itemsPerPage = 5;
-    const paginatedRows = filteredPosts.slice(
-        (currentPage - 1) * itemsPerPage,
-        currentPage * itemsPerPage
-    );
+
+    const fetchBlogs = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await blogsService.getBlogs({
+                page: currentPage,
+                limit: itemsPerPage,
+                search: search.trim() || undefined,
+            });
+            setSettings(data.settings || defaultBlogPageSettings);
+            setCategories((data.categories || []).map((c) => ({ name: c.name, slug: c.slug })));
+            setPosts(data.posts || []);
+            setTotalPages(data.pagination?.pages || 1);
+        } catch (err) {
+            push({
+                type: "error",
+                title: "Failed to load blogs",
+                description: getApiErrorMessage(err, "Failed to load blogs"),
+            });
+            setPosts([]);
+        } finally {
+            setLoading(false);
+        }
+    }, [currentPage, push, search]);
+
+    useEffect(() => {
+        fetchBlogs();
+    }, [fetchBlogs]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search]);
+
+    const categoryNameBySlug = useMemo(() => {
+        const map = new Map(categories.map((c) => [c.slug, c.name]));
+        return (slug?: string) => map.get(slug || "") || slug || "—";
+    }, [categories]);
+
+    const handleSaveSettings = async () => {
+        try {
+            const data = await blogsService.saveSettings(settings);
+            setSettings(data.settings);
+            push({
+                type: "success",
+                title: "Blog settings saved",
+                description: "Your blog overview settings were updated.",
+            });
+        } catch (err) {
+            push({
+                type: "error",
+                title: "Failed to save blog settings",
+                description: getApiErrorMessage(err, "Failed to save blog settings"),
+            });
+        }
+    };
+
+    const handleDeletePost = async (post: BlogPostRecord) => {
+        const result = await Swal.fire({
+            title: "Delete blog post?",
+            text: `Delete "${post.title}"? This cannot be undone.`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#EA3934",
+            confirmButtonText: "Delete",
+        });
+        if (!result.isConfirmed) return;
+
+        try {
+            await blogsService.deletePost(post.id);
+            push({
+                type: "success",
+                title: "Blog post deleted",
+                description: "The blog post was removed successfully.",
+            });
+            await fetchBlogs();
+        } catch (err) {
+            push({
+                type: "error",
+                title: "Failed to delete blog post",
+                description: getApiErrorMessage(err, "Failed to delete blog post"),
+            });
+        }
+    };
 
     return (
         <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
@@ -48,7 +128,7 @@ function BlogManagement() {
                         <TextAreaField label="Page Subtitle" value={settings.pageSubtitle} onChange={(v) => setSettings((p) => ({ ...p, pageSubtitle: v }))} rows={2} />
                         <TextField label="Featured Section Title" value={settings.featuredSectionTitle} onChange={(v) => setSettings((p) => ({ ...p, featuredSectionTitle: v }))} />
                         <TextField label="Featured Section Subtitle" value={settings.featuredSectionSubtitle} onChange={(v) => setSettings((p) => ({ ...p, featuredSectionSubtitle: v }))} />
-                        <TextField label="Items Per Page" value={String(settings.itemsPerPage)} onChange={(v) => setSettings((p) => ({ ...p, itemsPerPage: Number(v) || 15 }))} type="number" />
+                        <TextField label="Items Per Page" value={String(settings.itemsPerPage)} onChange={(v) => setSettings((p) => ({ ...p, itemsPerPage: Number(v) || 9 }))} type="number" />
                         <Toggle label="Show Search Bar" checked={settings.showSearch} onChange={(v) => setSettings((p) => ({ ...p, showSearch: v }))} />
                         <Toggle label="Show Category Filters" checked={settings.showCategoryFilters} onChange={(v) => setSettings((p) => ({ ...p, showCategoryFilters: v }))} />
                         <Toggle label="Show Recent Posts Sidebar" checked={settings.showRecentPostsSidebar} onChange={(v) => setSettings((p) => ({ ...p, showRecentPostsSidebar: v }))} />
@@ -59,7 +139,7 @@ function BlogManagement() {
                 <div className={sectionClass}>
                     <h3 className={sectionTitleClass}>Taxonomy</h3>
                     <p className="text-[13px] text-[#707070] mb-[8px]">
-                        Categories: {blogCategoriesSeed.map((c) => c.name).join(", ")}
+                        Categories: {categories.map((c) => c.name).join(", ") || "—"}
                     </p>
                 </div>
 
@@ -84,47 +164,57 @@ function BlogManagement() {
                         </button>
                     </div>
 
-                    <div className="overflow-x-auto w-full scrollbar-hide mb-[30px]">
-                        <div className="min-w-[850px]">
-                            <div className="rounded-[10px] border border-[rgba(34,34,34,0.08)] overflow-hidden bg-white">
-                                <div className="grid grid-cols-[1.8fr_1fr_1fr_0.8fr_0.8fr] gap-[16px] items-center px-[14px] py-[12px] bg-[#F5F5F5] border-b border-[rgba(34,34,34,0.08)]">
-                                    <p className="text-[14px] font-[SemiBold] text-[#222]">Title</p>
-                                    <p className="text-[14px] font-[SemiBold] text-[#222]">Category</p>
-                                    <p className="text-[14px] font-[SemiBold] text-[#222]">Publish Date</p>
-                                    <p className="text-[14px] font-[SemiBold] text-[#222]">Status</p>
-                                    <p className="text-[14px] font-[SemiBold] text-[#222]">Actions</p>
-                                </div>
-                                {paginatedRows.map((post) => (
-                                    <div key={post.id} className="grid grid-cols-[1.8fr_1fr_1fr_0.8fr_0.8fr] gap-[16px] items-center px-[14px] py-[14px] border-b border-[rgba(34,34,34,0.06)]">
-                                        <p className="text-[13px] font-[Medium] text-[#222]">{post.title}</p>
-                                        <p className="text-[13px] text-[#707070]">{blogCategoriesSeed.find((c) => c.id === post.categoryId)?.name ?? "-"}</p>
-                                        <p className="text-[13px] text-[#707070]">{post.publishDate}</p>
-                                        <span className={`text-[12px] font-[Medium] px-[10px] py-[4px] rounded-full w-fit ${post.isPublished ? "bg-[#E8F5EE] text-[#05A666]" : "bg-[#FFF2F2] text-[#EA3934]"}`}>
-                                            {post.isPublished ? "Published" : "Draft"}
-                                        </span>
-                                        <div className="flex items-center gap-[10px]">
-                                            <button type="button" onClick={() => navigate("/cmsblogdetail")} className="cursor-pointer">
-                                                <EditIcon />
-                                            </button>
-                                            <button type="button" className="cursor-pointer">
-                                                <TrashIcon />
-                                            </button>
+                    {loading ? (
+                        <Loader />
+                    ) : (
+                        <>
+                            <div className="overflow-x-auto w-full scrollbar-hide mb-[30px]">
+                                <div className="min-w-[850px]">
+                                    <div className="rounded-[10px] border border-[rgba(34,34,34,0.08)] overflow-hidden bg-white">
+                                        <div className="grid grid-cols-[1.8fr_1fr_1fr_0.8fr_0.8fr] gap-[16px] items-center px-[14px] py-[12px] bg-[#F5F5F5] border-b border-[rgba(34,34,34,0.08)]">
+                                            <p className="text-[14px] font-[SemiBold] text-[#222]">Title</p>
+                                            <p className="text-[14px] font-[SemiBold] text-[#222]">Category</p>
+                                            <p className="text-[14px] font-[SemiBold] text-[#222]">Publish Date</p>
+                                            <p className="text-[14px] font-[SemiBold] text-[#222]">Status</p>
+                                            <p className="text-[14px] font-[SemiBold] text-[#222]">Actions</p>
                                         </div>
+                                        {posts.length === 0 ? (
+                                            <div className="px-[14px] py-[24px] text-[13px] text-[#707070]">No blog posts found.</div>
+                                        ) : (
+                                            posts.map((post) => (
+                                                <div key={post.id} className="grid grid-cols-[1.8fr_1fr_1fr_0.8fr_0.8fr] gap-[16px] items-center px-[14px] py-[14px] border-b border-[rgba(34,34,34,0.06)]">
+                                                    <p className="text-[13px] font-[Medium] text-[#222]">{post.title}</p>
+                                                    <p className="text-[13px] text-[#707070]">{categoryNameBySlug(post.categorySlug)}</p>
+                                                    <p className="text-[13px] text-[#707070]">{post.publishDate || "—"}</p>
+                                                    <span className={`text-[12px] font-[Medium] px-[10px] py-[4px] rounded-full w-fit ${post.isPublished ? "bg-[#E8F5EE] text-[#05A666]" : "bg-[#FFF2F2] text-[#EA3934]"}`}>
+                                                        {post.isPublished ? "Published" : "Draft"}
+                                                    </span>
+                                                    <div className="flex items-center gap-[10px]">
+                                                        <button type="button" onClick={() => navigate(`/cmsblogdetail?id=${post.id}`)} className="cursor-pointer">
+                                                            <EditIcon />
+                                                        </button>
+                                                        <button type="button" onClick={() => handleDeletePost(post)} className="cursor-pointer">
+                                                            <TrashIcon />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
                                     </div>
-                                ))}
+                                </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <Pagenation
-                        currentPage={currentPage}
-                        totalPages={Math.max(1, Math.ceil(filteredPosts.length / itemsPerPage))}
-                        onPageChange={setCurrentPage}
-                    />
+                            <Pagenation
+                                currentPage={currentPage}
+                                totalPages={totalPages}
+                                onPageChange={setCurrentPage}
+                            />
+                        </>
+                    )}
                 </div>
 
                 <SeoSection seo={settings.seo} onChange={(seo) => setSettings((p) => ({ ...p, seo }))} />
-                <SaveBar onSave={() => console.log("Save Blog Settings", settings)} />
+                <SaveBar onSave={handleSaveSettings} />
             </div>
         </div>
     );

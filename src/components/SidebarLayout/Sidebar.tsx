@@ -25,6 +25,7 @@ const MASTER_DATA_PATHS = [
     "/countries",
     "/propertylocations",
     "/projectlocations",
+    "/blogcategories",
 ];
 
 const LISTING_MANAGEMENT_PATHS = [
@@ -110,6 +111,7 @@ const navItems: NavItem[] = [
             { path: "/countries", label: "Countries" },
             { path: "/propertylocations", label: "Property Locations" },
             { path: "/projectlocations", label: "Project Locations" },
+            { path: "/blogcategories", label: "Blog Categories" },
         ]
     },
     {
