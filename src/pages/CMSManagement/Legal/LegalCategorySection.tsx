@@ -3,18 +3,23 @@ import Swal from "sweetalert2";
 import { useToast } from "../../../context/ToastContext";
 import { getApiErrorMessage } from "../../../services/apiClient";
 import { legalService } from "../../../services/legalService";
-import type { LegalDocumentRecord } from "../../../types/api";
+import type { LegalDocumentRecord, LegalPageType } from "../../../types/api";
 import { TextField } from "../shared/CmsFormShared";
 
 type LegalCategorySectionProps = {
   countryCode: string;
+  pageType: LegalPageType;
   documents: LegalDocumentRecord[];
   onSaved: () => void;
 };
 
-const newCategoryDraft = (countryCode: string): LegalDocumentRecord => ({
+const newCategoryDraft = (
+  countryCode: string,
+  pageType: LegalPageType
+): LegalDocumentRecord => ({
   categoryName: "",
   countryCode,
+  pageType,
   content: "",
   isActive: true,
   displayOrder: 0,
@@ -22,6 +27,7 @@ const newCategoryDraft = (countryCode: string): LegalDocumentRecord => ({
 
 export function LegalCategorySection({
   countryCode,
+  pageType,
   documents,
   onSaved,
 }: LegalCategorySectionProps) {
@@ -56,7 +62,7 @@ export function LegalCategorySection({
       if (prev && visibleDocuments.some((d) => d.id === prev)) return prev;
       return first?.id || "";
     });
-  }, [countryCode, visibleDocuments]);
+  }, [countryCode, pageType, visibleDocuments]);
 
   useEffect(() => {
     if (isNewCategory) {
@@ -142,9 +148,10 @@ export function LegalCategorySection({
 
     try {
       const payload: LegalDocumentRecord = {
-        ...(isNewCategory ? newCategoryDraft(countryCode) : activeDoc!),
+        ...(isNewCategory ? newCategoryDraft(countryCode, pageType) : activeDoc!),
         categoryName: name,
         countryCode,
+        pageType,
         content,
       };
 
@@ -211,23 +218,33 @@ export function LegalCategorySection({
   return (
     <>
       <div className="flex flex-wrap items-center gap-[8px] mb-[20px]">
-        {visibleDocuments.map((doc) => (
-          <button
-            key={doc.id}
-            type="button"
-            onClick={() => {
-              setIsNewCategory(false);
-              setActiveDocId(doc.id || "");
-            }}
-            className={`px-[16px] py-[10px] rounded-[10px] text-[13px] font-[Medium] cursor-pointer border ${
-              !isNewCategory && activeDoc?.id === doc.id
-                ? "bg-[#6A3CA8] text-white border-[#6A3CA8]"
-                : "bg-white text-[#222] border-[#EAEAEA]"
-            }`}
-          >
-            {doc.categoryName}
-          </button>
-        ))}
+        {visibleDocuments.length > 0 && (
+          <div className="border-b border-[rgba(34,34,34,0.10)] overflow-x-auto scrollbar-hide">
+            <div className="flex min-w-full w-max flex-nowrap gap-[28px]">
+              {visibleDocuments.map((doc) => {
+                const active = !isNewCategory && activeDoc?.id === doc.id;
+                return (
+                  <button
+                    key={doc.id}
+                    type="button"
+                    onClick={() => {
+                      setIsNewCategory(false);
+                      setActiveDocId(doc.id || "");
+                    }}
+                    className={`relative shrink-0 cursor-pointer whitespace-nowrap px-[4px] py-[12px] text-[13px] transition-colors ${
+                      active ? "text-[#6A3CA8] font-[SemiBold]" : "text-[#222] font-[Regular]"
+                    }`}
+                  >
+                    {doc.categoryName}
+                    {active && (
+                      <span className="absolute left-0 right-0 bottom-0 h-[3px] rounded-t-full bg-[#6A3CA8]" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <button
           type="button"
           onClick={handleAddCategory}
@@ -249,7 +266,11 @@ export function LegalCategorySection({
               value={categoryName}
               onChange={setCategoryName}
               required
-              placeholder="e.g. Terms of use, Privacy policy"
+              placeholder={
+                pageType === "privacy"
+                  ? "e.g. Privacy policy, Cookie policy"
+                  : "e.g. Terms of use, User agreement"
+              }
             />
           </div>
 

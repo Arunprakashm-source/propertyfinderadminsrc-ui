@@ -7,11 +7,13 @@ import type {
 
 export type GetLegalAdminParams = {
   countryCode?: string;
+  pageType?: "terms" | "privacy";
 };
 
 const buildQuery = (params: GetLegalAdminParams) => {
   const search = new URLSearchParams();
   if (params.countryCode) search.set("countryCode", params.countryCode);
+  if (params.pageType) search.set("pageType", params.pageType);
   const qs = search.toString();
   return qs ? `?${qs}` : "";
 };

@@ -5,8 +5,11 @@ export interface SeoFields {
 }
 
 export interface AboutUsSettings {
+    heroEyebrow: string;
     heroHeadline: string;
     heroSubheadline: string;
+    heroBannerImage: string;
+    heroGalleryImages: string[];
     bannerText: string;
     businessSectionTitle: string;
     businessParagraph1: string;
@@ -21,6 +24,8 @@ export interface AboutUsSettings {
     stat2Description: string;
     stat3Value: string;
     stat3Description: string;
+    successSectionTitle: string;
+    ctaBackgroundImage: string;
     ctaHeadline: string;
     ctaSubheadline: string;
     ctaButtonLabel: string;
@@ -29,8 +34,10 @@ export interface AboutUsSettings {
 }
 
 export interface SuccessTimelineEntry {
-    id: number;
-    date: string;
+    id: string;
+    month: string;
+    day: string;
+    year: string;
     title: string;
     description: string;
     displayOrder: number;
@@ -44,9 +51,11 @@ export interface TeamPageSettings {
 }
 
 export interface TeamMember {
-    id: number;
+    id: string;
     fullName: string;
     jobTitle: string;
+    email: string;
+    phone: string;
     profileImage: string;
     displayOrder: number;
     isActive: boolean;
@@ -55,6 +64,7 @@ export interface TeamMember {
 export interface ContactPageSettings {
     heroTitle: string;
     heroSubtitle: string;
+    heroBackgroundImage: string;
     sectionTitle: string;
     sectionSubtext: string;
     email: string;
@@ -69,7 +79,7 @@ export interface ContactPageSettings {
 }
 
 export interface OfficeLocation {
-    id: number;
+    id: string;
     city: string;
     country: string;
     locationType: string;
@@ -82,7 +92,7 @@ export interface OfficeLocation {
 }
 
 export interface ContactSubmission {
-    id: number;
+    id: string;
     name: string;
     email: string;
     phone: string;
@@ -175,14 +185,14 @@ export const SITEMAP_CATEGORIES: SitemapCategory[] = [
 ];
 
 export const teamMembersSeed: TeamMember[] = [
-    { id: 1, fullName: "William James", jobTitle: "Senior Property Consultant", profileImage: "", displayOrder: 1, isActive: true },
-    { id: 2, fullName: "Sarah Ahmed", jobTitle: "Property Advisor", profileImage: "", displayOrder: 2, isActive: true },
-    { id: 3, fullName: "Mohamed Ali", jobTitle: "Sales Manager", profileImage: "", displayOrder: 3, isActive: true },
+    { id: "1", fullName: "William James", jobTitle: "Senior Property Consultant", email: "william@propertyfinder.ae", phone: "+971 4 558 0001", profileImage: "", displayOrder: 1, isActive: true },
+    { id: "2", fullName: "Sarah Ahmed", jobTitle: "Property Advisor", email: "sarah@propertyfinder.ae", phone: "+971 4 558 0002", profileImage: "", displayOrder: 2, isActive: true },
+    { id: "3", fullName: "Mohamed Ali", jobTitle: "Sales Manager", email: "mohamed@propertyfinder.ae", phone: "+971 4 558 0003", profileImage: "", displayOrder: 3, isActive: true },
 ];
 
 export const officeLocationsSeed: OfficeLocation[] = [
     {
-        id: 1,
+        id: "istanbul-tech",
         city: "Istanbul",
         country: "Turkey",
         locationType: "Tech hub",
@@ -197,7 +207,7 @@ export const officeLocationsSeed: OfficeLocation[] = [
 
 export const contactSubmissionsSeed: ContactSubmission[] = [
     {
-        id: 1,
+        id: "seed-1",
         name: "John Doe",
         email: "john@example.com",
         phone: "+971 50 123 4567",
@@ -268,26 +278,31 @@ export const sitemapSectionsSeed: SitemapSection[] = [
 ];
 
 export const defaultAboutUsSettings: AboutUsSettings = {
+    heroEyebrow: "ABOUT US",
     heroHeadline: "To motivate and inspire people to get living the life they deserve.",
-    heroSubheadline: "When you look for a property, it's not just a home you see, it's a better future.",
-    bannerText: "★ UNLOCK YOUR POTENTIAL",
+    heroSubheadline: "When you look for a property, it's not just a better home you seek, it's a better future.",
+    heroBannerImage: "",
+    heroGalleryImages: ["", "", ""],
+    bannerText: "Unlock your potential",
     businessSectionTitle: "How can we help for your business?",
     businessParagraph1: "We help businesses connect with the right audience through property listings and insights.",
     businessParagraph2: "Our platform supports agents, developers, and agencies to grow their reach.",
     businessCtaPrimaryLabel: "Meet our team",
-    businessCtaPrimaryUrl: "/our-team",
-    businessCtaSecondaryLabel: "Read more",
-    businessCtaSecondaryUrl: "/about",
+    businessCtaPrimaryUrl: "/teams",
+    businessCtaSecondaryLabel: "Find properties",
+    businessCtaSecondaryUrl: "/searchlisting",
     stat1Value: "100%",
-    stat1Description: "Commitment to verified listings",
+    stat1Description: "Trust worthy for real estate business growth and individual property selling",
     stat2Value: "90%",
-    stat2Description: "Customer satisfaction rate",
+    stat2Description: "Dubai properties listed here are verified and ready for you to own and use.",
     stat3Value: "10k+",
-    stat3Description: "Properties listed across regions",
+    stat3Description: "Real estate companies and Agents are registered here for there growth",
+    successSectionTitle: "Our Success",
+    ctaBackgroundImage: "",
     ctaHeadline: "Ready to Invest or Move?",
-    ctaSubheadline: "Be the first to get the latest news and opportunities in the marketplace.",
+    ctaSubheadline: "Verified listings, trusted agents, and real opportunities — all in one place.",
     ctaButtonLabel: "Discover Properties",
-    ctaButtonUrl: "/buy",
+    ctaButtonUrl: "/searchlisting",
     seo: { metaTitle: "About Us | Property Finder", metaDescription: "Learn about Property Finder", metaKeywords: "about, property finder" },
 };
 
@@ -301,6 +316,7 @@ export const defaultTeamPageSettings: TeamPageSettings = {
 export const defaultContactPageSettings: ContactPageSettings = {
     heroTitle: "We want to hear from you",
     heroSubtitle: "Send us a message, give us a call, or better still visit us.",
+    heroBackgroundImage: "",
     sectionTitle: "Let's get in touch",
     sectionSubtext: "Contact if you have any queries",
     email: "info@propertyfinder.ae",

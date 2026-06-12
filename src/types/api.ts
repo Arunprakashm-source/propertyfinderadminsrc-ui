@@ -752,6 +752,7 @@ export type SupportedUrlsResponse = {
     developerUrl?: { img?: string; doc?: string };
     agentUrl?: { img?: string; doc?: string };
     blogUrl?: { img?: string; vid?: string; doc?: string };
+    teamUrl?: { img?: string; vid?: string; doc?: string };
   };
 };
 
@@ -867,9 +868,12 @@ export type LegalPageSettings = {
   contactBlock?: LegalContactBlock;
 };
 
+export type LegalPageType = "terms" | "privacy";
+
 export type LegalDocumentRecord = {
   id?: string;
   countryCode?: string;
+  pageType?: LegalPageType;
   categoryName: string;
   slug?: string;
   content?: string;
@@ -881,6 +885,148 @@ export type LegalAdminResponse = {
   settings: LegalPageSettings;
   countries: CountryRecord[];
   documents: LegalDocumentRecord[];
+};
+
+export type AboutSeoFields = {
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
+};
+
+export type AboutPageSettings = {
+  heroEyebrow?: string;
+  heroHeadline?: string;
+  heroSubheadline?: string;
+  heroBannerImage?: string;
+  heroGalleryImages?: string[];
+  bannerText?: string;
+  businessSectionTitle?: string;
+  businessParagraph1?: string;
+  businessParagraph2?: string;
+  businessCtaPrimaryLabel?: string;
+  businessCtaPrimaryUrl?: string;
+  businessCtaSecondaryLabel?: string;
+  businessCtaSecondaryUrl?: string;
+  stat1Value?: string;
+  stat1Description?: string;
+  stat2Value?: string;
+  stat2Description?: string;
+  stat3Value?: string;
+  stat3Description?: string;
+  successSectionTitle?: string;
+  ctaBackgroundImage?: string;
+  ctaHeadline?: string;
+  ctaSubheadline?: string;
+  ctaButtonLabel?: string;
+  ctaButtonUrl?: string;
+  seo?: AboutSeoFields;
+};
+
+export type AboutTimelineEntry = {
+  id: string;
+  month: string;
+  day: string;
+  year: string;
+  title: string;
+  description: string;
+  displayOrder: number;
+};
+
+export type AboutAdminResponse = {
+  settings: AboutPageSettings;
+  timeline: AboutTimelineEntry[];
+};
+
+export type ContactSeoFields = {
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
+};
+
+export type ContactPageSettings = {
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroBackgroundImage?: string;
+  sectionTitle?: string;
+  sectionSubtext?: string;
+  email?: string;
+  phone?: string;
+  officeAddress?: string;
+  mapUrl?: string;
+  facebookUrl?: string;
+  instagramUrl?: string;
+  twitterUrl?: string;
+  linkedinUrl?: string;
+  seo?: ContactSeoFields;
+};
+
+export type ContactOfficeLocation = {
+  id: string;
+  city: string;
+  country: string;
+  locationType: string;
+  address: string;
+  mapUrl: string;
+  phone: string;
+  email: string;
+  displayOrder: number;
+  isActive: boolean;
+};
+
+export type ContactSubmissionRecord = {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  subject: string;
+  comments: string;
+  submittedAt: string;
+};
+
+export type ContactAdminResponse = {
+  settings: ContactPageSettings;
+  formSubjects: string[];
+  locations: ContactOfficeLocation[];
+  submissions: ContactSubmissionRecord[];
+};
+
+export type TeamSeoFields = {
+  metaTitle?: string;
+  metaDescription?: string;
+  metaKeywords?: string;
+};
+
+export type TeamPageSettings = {
+  pageTitle?: string;
+  pageSubtitle?: string;
+  itemsPerPage?: number;
+  seo?: TeamSeoFields;
+};
+
+export type TeamMemberRecord = {
+  id: string;
+  fullName: string;
+  jobTitle: string;
+  email: string;
+  phone: string;
+  profileImage: string;
+  displayOrder: number;
+  isActive: boolean;
+};
+
+export type TeamPagination = {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+};
+
+export type TeamAdminResponse = {
+  settings: TeamPageSettings;
+  members: TeamMemberRecord[];
+  member?: TeamMemberRecord | null;
+  pagination: TeamPagination;
+  mediaBaseUrl?: { img?: string };
 };
 
 export type PropertyLocationOption = {
