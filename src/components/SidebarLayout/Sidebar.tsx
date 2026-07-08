@@ -93,8 +93,8 @@ const navItems: NavItem[] = [
         subItems: [
             { path: "/listingproperty", label: "Listing Properties" },
             { path: "/listingproject", label: "Listing Projects" },
-            { path: "/listingprojectinquiry", label: "Listing Project Inquiries" },
-            { path: "/listingpropertyinquiry", label: "Listing Property Inquiries" },
+            // { path: "/listingprojectinquiry", label: "Listing Project Inquiries" },
+            // { path: "/listingpropertyinquiry", label: "Listing Property Inquiries" },
         ]
     },
     {
@@ -122,11 +122,12 @@ const navItems: NavItem[] = [
         subItems: [
             { path: "/cmsaboutus", label: "About Us" },
             { path: "/cmsteam", label: "Our Team" },
+            { path: "/cmstestimonials", label: "Testimonials" },
             { path: "/cmscontactus", label: "Contact Us" },
             { path: "/cmsblogs", label: "Blogs" },
-            { path: "/cmssitemap", label: "Sitemap" },
             { path: "/cmslegal", label: "Legal Pages" },
             { path: "/banner", label: "Banner Management" },
+            { path: "/cmssitemap", label: "Sitemap" },
             { path: "/seosetting", label: "SEO Settings" },
         ]
     },

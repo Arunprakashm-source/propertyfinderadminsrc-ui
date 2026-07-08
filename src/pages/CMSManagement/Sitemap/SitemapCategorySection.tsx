@@ -2,35 +2,29 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { useToast } from "../../../context/ToastContext";
 import { getApiErrorMessage } from "../../../services/apiClient";
-import { legalService } from "../../../services/legalService";
-import type { LegalDocumentRecord, LegalPageType } from "../../../types/api";
+import { sitemapService } from "../../../services/sitemapService";
+import type { SitemapDocumentRecord } from "../../../types/api";
 import { TextField } from "../shared/CmsFormShared";
 
-type LegalCategorySectionProps = {
+type SitemapCategorySectionProps = {
   countryCode: string;
-  pageType: LegalPageType;
-  documents: LegalDocumentRecord[];
+  documents: SitemapDocumentRecord[];
   onSaved: () => void;
 };
 
-const newCategoryDraft = (
-  countryCode: string,
-  pageType: LegalPageType
-): LegalDocumentRecord => ({
+const newCategoryDraft = (countryCode: string): SitemapDocumentRecord => ({
   categoryName: "",
   countryCode,
-  pageType,
   content: "",
   isActive: true,
   displayOrder: 0,
 });
 
-export function LegalCategorySection({
+export function SitemapCategorySection({
   countryCode,
-  pageType,
   documents,
   onSaved,
-}: LegalCategorySectionProps) {
+}: SitemapCategorySectionProps) {
   const { push } = useToast();
   const [activeDocId, setActiveDocId] = useState("");
   const [categoryName, setCategoryName] = useState("");
@@ -44,27 +38,25 @@ export function LegalCategorySection({
     () =>
       documents
         .filter(
-          (doc) =>
-            (doc.countryCode || "AE").toUpperCase() === countryCode.toUpperCase() &&
-            (doc.pageType || "terms") === pageType
+          (doc) => (doc.countryCode || "AE").toUpperCase() === countryCode.toUpperCase()
         )
         .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)),
-    [documents, countryCode, pageType]
+    [documents, countryCode]
   );
 
   const activeDoc = useMemo(() => {
     if (isNewCategory) return null;
-    return visibleDocuments.find((d) => d.id === activeDocId) ?? visibleDocuments[0] ?? null;
+    return visibleDocuments.find((doc) => doc.id === activeDocId) ?? visibleDocuments[0] ?? null;
   }, [visibleDocuments, activeDocId, isNewCategory]);
 
   useEffect(() => {
     setIsNewCategory(false);
     const first = visibleDocuments[0];
     setActiveDocId((prev) => {
-      if (prev && visibleDocuments.some((d) => d.id === prev)) return prev;
+      if (prev && visibleDocuments.some((doc) => doc.id === prev)) return prev;
       return first?.id || "";
     });
-  }, [countryCode, pageType, visibleDocuments]);
+  }, [countryCode, visibleDocuments]);
 
   useEffect(() => {
     if (isNewCategory) {
@@ -149,15 +141,14 @@ export function LegalCategorySection({
     }
 
     try {
-      const payload: LegalDocumentRecord = {
-        ...(isNewCategory ? newCategoryDraft(countryCode, pageType) : activeDoc!),
+      const payload: SitemapDocumentRecord = {
+        ...(isNewCategory ? newCategoryDraft(countryCode) : activeDoc!),
         categoryName: name,
         countryCode,
-        pageType,
         content,
       };
 
-      await legalService.saveDocument(payload);
+      await sitemapService.saveDocument(payload);
       push({
         type: "success",
         title: "Category saved",
@@ -190,7 +181,7 @@ export function LegalCategorySection({
     if (!result.isConfirmed) return;
 
     try {
-      await legalService.deleteDocument(activeDoc.id);
+      await sitemapService.deleteDocument(activeDoc.id);
       push({
         type: "success",
         title: "Category deleted",
@@ -268,11 +259,7 @@ export function LegalCategorySection({
               value={categoryName}
               onChange={setCategoryName}
               required
-              placeholder={
-                pageType === "privacy"
-                  ? "e.g. Privacy policy, Cookie policy"
-                  : "e.g. Terms of use, User agreement"
-              }
+              placeholder="e.g. Buy, Rent, Commercial Buy, Apartments for sale"
             />
           </div>
 

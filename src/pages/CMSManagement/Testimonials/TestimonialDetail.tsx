@@ -4,35 +4,35 @@ import Loader from "../../../components/Loader/loader";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "../../../context/ToastContext";
 import { getApiErrorMessage } from "../../../services/apiClient";
-import { teamService } from "../../../services/teamService";
+import { testimonialService } from "../../../services/testimonialService";
 import { apiClient } from "../../../services/apiClient";
 import type { SupportedUrlsResponse } from "../../../types/api";
 import profileimg from "../../../assets/img/profileless.png";
-import { SaveBar, TextField, Toggle, sectionClass, sectionTitleClass } from "../shared/CmsFormShared";
+import { SaveBar, TextAreaField, TextField, Toggle, sectionClass, sectionTitleClass } from "../shared/CmsFormShared";
 
-function TeamMemberDetail() {
+function TestimonialDetail() {
     const navigate = useNavigate();
     const { push } = useToast();
     const [searchParams] = useSearchParams();
-    const memberId = searchParams.get("id") || "";
+    const testimonialId = searchParams.get("id") || "";
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const objectUrlRef = useRef<string | null>(null);
 
-    const [loading, setLoading] = useState(Boolean(memberId));
-    const [teamImgBaseUrl, setTeamImgBaseUrl] = useState("");
+    const [loading, setLoading] = useState(Boolean(testimonialId));
+    const [imgBaseUrl, setImgBaseUrl] = useState("");
 
-    const [fullName, setFullName] = useState("");
-    const [jobTitle, setJobTitle] = useState("");
-    const [email, setEmail] = useState("");
-    const [phone, setPhone] = useState("");
+    const [name, setName] = useState("");
+    const [title, setTitle] = useState("Customer");
+    const [content, setContent] = useState("");
+    const [rating, setRating] = useState("");
     const [displayOrder, setDisplayOrder] = useState(1);
     const [isActive, setIsActive] = useState(true);
-    const [profileImage, setProfileImage] = useState("");
+    const [image, setImage] = useState("");
     const [preview, setPreview] = useState<string | null>(null);
-    const [profileImageFile, setProfileImageFile] = useState<File | null>(null);
+    const [imageFile, setImageFile] = useState<File | null>(null);
 
-    const resolveImageSrcWithBase = (filename: string, baseUrl = teamImgBaseUrl) => {
+    const resolveImageSrcWithBase = (filename: string, baseUrl = imgBaseUrl) => {
         const raw = (filename || "").trim();
         if (!raw) return "";
         if (/^https?:\/\//i.test(raw) || raw.startsWith("blob:")) return raw;
@@ -40,17 +40,15 @@ function TeamMemberDetail() {
         return base ? `${base}/${encodeURIComponent(raw)}` : raw;
     };
 
-    const resolveImageSrc = (filename: string) => resolveImageSrcWithBase(filename);
-
     useEffect(() => {
         let mounted = true;
         const controller = new AbortController();
 
         const load = async () => {
             try {
-                const [teamData, urls] = await Promise.all([
-                    teamService.getTeam(
-                        memberId ? { memberId } : {},
+                const [data, urls] = await Promise.all([
+                    testimonialService.getTestimonials(
+                        testimonialId ? { testimonialId } : {},
                         controller.signal
                     ),
                     apiClient.get<SupportedUrlsResponse>(
@@ -62,20 +60,20 @@ function TeamMemberDetail() {
                 if (!mounted) return;
 
                 const base =
-                    (teamData.mediaBaseUrl?.img || urls.supportedUrls?.teamUrl?.img || "").trim();
-                setTeamImgBaseUrl(base);
+                    (data.mediaBaseUrl?.img || urls.supportedUrls?.testimonialUrl?.img || "").trim();
+                setImgBaseUrl(base);
 
-                const member = teamData.member || teamData.members?.[0];
-                if (member) {
-                    setFullName(member.fullName || "");
-                    setJobTitle(member.jobTitle || "");
-                    setEmail(member.email || "");
-                    setPhone(member.phone || "");
-                    setDisplayOrder(member.displayOrder || 1);
-                    setIsActive(member.isActive !== false);
-                    setProfileImage(member.profileImage || "");
-                    const imagePreview = member.profileImage
-                        ? resolveImageSrcWithBase(member.profileImage, base)
+                const item = data.testimonial || data.testimonials?.[0];
+                if (item) {
+                    setName(item.name || "");
+                    setTitle(item.title || "Customer");
+                    setContent(item.content || "");
+                    setRating(item.rating != null ? String(item.rating) : "");
+                    setDisplayOrder(item.displayOrder || 1);
+                    setIsActive(item.isActive !== false);
+                    setImage(item.image || "");
+                    const imagePreview = item.image
+                        ? resolveImageSrcWithBase(item.image, base)
                         : null;
                     setPreview(imagePreview || null);
                 }
@@ -83,8 +81,8 @@ function TeamMemberDetail() {
                 if (!controller.signal.aborted) {
                     push({
                         type: "error",
-                        title: "Failed to load team member",
-                        description: getApiErrorMessage(error, "Unable to fetch team member."),
+                        title: "Failed to load testimonial",
+                        description: getApiErrorMessage(error, "Unable to fetch testimonial."),
                     });
                 }
             } finally {
@@ -102,7 +100,7 @@ function TeamMemberDetail() {
                 objectUrlRef.current = null;
             }
         };
-    }, [memberId, push]);
+    }, [testimonialId, push]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -113,38 +111,40 @@ function TeamMemberDetail() {
         const url = URL.createObjectURL(file);
         objectUrlRef.current = url;
         setPreview(url);
-        setProfileImageFile(file);
+        setImageFile(file);
     };
 
     const handleSave = async () => {
-        if (!fullName.trim() || !jobTitle.trim()) {
+        if (!name.trim() || !content.trim()) {
             push({
                 type: "error",
                 title: "Validation",
-                description: "Full name and job title are required.",
+                description: "Customer name and quote are required.",
             });
             return;
         }
 
+        const parsedRating = rating.trim() ? Number(rating) : null;
+
         try {
-            await teamService.saveMember({
-                memberId: memberId || undefined,
-                fullName,
-                jobTitle,
-                email,
-                phone,
+            await testimonialService.saveTestimonial({
+                testimonialId: testimonialId || undefined,
+                name,
+                title,
+                content,
+                rating: parsedRating,
                 displayOrder,
                 isActive,
-                profileImage: profileImageFile ? undefined : profileImage,
-                profileImageFile,
+                image: imageFile ? undefined : image,
+                imageFile,
             });
-            push({ type: "success", title: "Saved", description: "Team member saved." });
-            navigate("/cmsteam");
+            push({ type: "success", title: "Saved", description: "Testimonial saved." });
+            navigate("/cmstestimonials");
         } catch (error) {
             push({
                 type: "error",
                 title: "Save failed",
-                description: getApiErrorMessage(error, "Unable to save team member."),
+                description: getApiErrorMessage(error, "Unable to save testimonial."),
             });
         }
     };
@@ -152,7 +152,7 @@ function TeamMemberDetail() {
     if (loading) {
         return (
             <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
-                <Header title="Team Member" showBack={true} onBackClick={() => navigate("/cmsteam")} />
+                <Header title="Testimonial" showBack={true} onBackClick={() => navigate("/cmstestimonials")} />
                 <Loader />
             </div>
         );
@@ -160,23 +160,40 @@ function TeamMemberDetail() {
 
     return (
         <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
-            <Header title="Team Member" showBack={true} onBackClick={() => navigate("/cmsteam")} />
+            <Header title="Testimonial" showBack={true} onBackClick={() => navigate("/cmstestimonials")} />
 
             <div className="mt-[20px]">
                 <div className={sectionClass}>
-                    <h3 className={sectionTitleClass}>Member Details</h3>
+                    <h3 className={sectionTitleClass}>Customer Details</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
-                        <TextField label="Full Name" value={fullName} onChange={setFullName} required />
-                        <TextField label="Job Title / Role" value={jobTitle} onChange={setJobTitle} required />
-                        <TextField label="Email" value={email} onChange={setEmail} type="email" />
-                        <TextField label="Contact Number" value={phone} onChange={setPhone} />
-                        <TextField label="Display Order" value={String(displayOrder)} onChange={(v) => setDisplayOrder(Number(v) || 0)} type="number" />
-                        <Toggle label="Status" checked={isActive} onChange={setIsActive} />
+                        <TextField label="Customer Name" value={name} onChange={setName} required />
+                        <TextField label="Role / Designation" value={title} onChange={setTitle} />
+                        <TextField
+                            label="Star Rating (1–5)"
+                            value={rating}
+                            onChange={setRating}
+                            type="number"
+                        />
+                        <TextField
+                            label="Display Order"
+                            value={String(displayOrder)}
+                            onChange={(v) => setDisplayOrder(Number(v) || 0)}
+                            type="number"
+                        />
+                        <Toggle label="Active on Home" checked={isActive} onChange={setIsActive} />
+                        <div className="md:col-span-2">
+                            <TextAreaField
+                                label="Testimonial Quote"
+                                value={content}
+                                onChange={setContent}
+                                required
+                            />
+                        </div>
                     </div>
                 </div>
 
                 <div className={sectionClass}>
-                    <h3 className={sectionTitleClass}>Profile Picture</h3>
+                    <h3 className={sectionTitleClass}>Profile Photo</h3>
                     <div className="flex items-center gap-[16px] flex-wrap">
                         <img src={preview || profileimg} alt="Profile" className="w-[80px] h-[80px] rounded-full object-cover border border-[#EAEAEA]" />
                         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -192,4 +209,4 @@ function TeamMemberDetail() {
     );
 }
 
-export default TeamMemberDetail;
+export default TestimonialDetail;

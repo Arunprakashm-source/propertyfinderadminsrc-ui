@@ -25,6 +25,10 @@ import ReportManagementDetail from "./pages/ReportManagement/ReportManagementDet
 import AboutUsSettings from "./pages/CMSManagement/AboutUs/AboutUsSettings";
 import TeamManagement from "./pages/CMSManagement/Team/TeamManagement";
 import TeamMemberDetail from "./pages/CMSManagement/Team/TeamMemberDetail";
+import TestimonialManagement from "./pages/CMSManagement/Testimonials/TestimonialManagement";
+import TestimonialDetail from "./pages/CMSManagement/Testimonials/TestimonialDetail";
+import BannerManagement from "./pages/CMSManagement/Banner/BannerManagement";
+import BannerDetail from "./pages/CMSManagement/Banner/BannerDetail";
 import ContactUsSettings from "./pages/CMSManagement/ContactUs/ContactUsSettings";
 import SitemapSettings from "./pages/CMSManagement/Sitemap/SitemapSettings";
 import LegalPagesSettings from "./pages/CMSManagement/Legal/LegalPagesSettings";
@@ -84,6 +88,10 @@ function App() {
               <Route path="/cmsaboutus" element={<AboutUsSettings />} />
               <Route path="/cmsteam" element={<TeamManagement />} />
               <Route path="/cmsteamdetail" element={<TeamMemberDetail />} />
+              <Route path="/cmstestimonials" element={<TestimonialManagement />} />
+              <Route path="/cmstestimonialdetail" element={<TestimonialDetail />} />
+              <Route path="/banner" element={<BannerManagement />} />
+              <Route path="/bannerdetail" element={<BannerDetail />} />
               <Route path="/cmscontactus" element={<ContactUsSettings />} />
               <Route path="/cmssitemap" element={<SitemapSettings />} />
               <Route path="/cmslegal" element={<LegalPagesSettings />} />

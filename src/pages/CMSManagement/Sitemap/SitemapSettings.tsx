@@ -1,126 +1,181 @@
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import "quill/dist/quill.snow.css";
 import Header from "../../../components/Header/Header";
-import { SITEMAP_CATEGORIES, sitemapSectionsSeed } from "../cmsData";
+import Loader from "../../../components/Loader/loader";
+import { useToast } from "../../../context/ToastContext";
+import { getApiErrorMessage } from "../../../services/apiClient";
+import { sitemapService } from "../../../services/sitemapService";
+import type { CountryRecord, SitemapDocumentRecord, SitemapPageSettings } from "../../../types/api";
 import {
-    Dropdown,
-    SaveBar,
-    TextField,
-    Toggle,
-    sectionClass,
-    sectionTitleClass,
+  Dropdown,
+  SaveBar,
+  TextField,
+  sectionClass,
+  sectionTitleClass,
 } from "../shared/CmsFormShared";
+import { SitemapCategorySection } from "./SitemapCategorySection";
+
+const emptySettings: SitemapPageSettings = {
+  breadcrumbHomeLabel: "Home",
+  breadcrumbLabel: "Site map",
+  pageTitle: "Sitemap",
+  defaultCountryCode: "AE",
+  locationNames: {
+    AE: "Umm Al Quwain",
+  },
+};
 
 function SitemapSettings() {
-    const [sections, setSections] = useState(sitemapSectionsSeed);
-    const [selectedSectionId, setSelectedSectionId] = useState(sections[0]?.id ?? 1);
-    const selectedSection = sections.find((s) => s.id === selectedSectionId) ?? sections[0];
+  const { push } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [settings, setSettings] = useState<SitemapPageSettings>(emptySettings);
+  const [countries, setCountries] = useState<CountryRecord[]>([]);
+  const [documents, setDocuments] = useState<SitemapDocumentRecord[]>([]);
+  const [filterCountry, setFilterCountry] = useState("AE");
+  const [refreshKey, setRefreshKey] = useState(0);
 
-    const updateSection = (field: string, value: string | boolean) => {
-        setSections((prev) =>
-            prev.map((s) => (s.id === selectedSectionId ? { ...s, [field]: value } : s))
-        );
-    };
+  const countryOptions = useMemo(
+    () =>
+      countries
+        .map((country) => ({
+          value: country.code || "",
+          label: country.name || country.code || "",
+        }))
+        .filter((country) => country.value),
+    [countries]
+  );
 
-    const updateLink = (linkId: number, field: string, value: string | number) => {
-        setSections((prev) =>
-            prev.map((s) =>
-                s.id === selectedSectionId
-                    ? { ...s, links: s.links.map((l) => (l.id === linkId ? { ...l, [field]: value } : l)) }
-                    : s
-            )
-        );
-    };
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await sitemapService.getSitemap({ countryCode: filterCountry });
+      setSettings({ ...emptySettings, ...data.settings });
+      setCountries(data.countries ?? []);
+      setDocuments(data.documents ?? []);
+    } catch (error) {
+      push({
+        type: "error",
+        title: "Failed to load sitemap",
+        description: getApiErrorMessage(error, "Unable to fetch sitemap CMS data."),
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [filterCountry, push]);
 
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData, refreshKey]);
+
+  const updateSettings = <K extends keyof SitemapPageSettings>(
+    key: K,
+    value: SitemapPageSettings[K]
+  ) => {
+    setSettings((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const updateLocationNameForCountry = (countryCode: string, value: string) => {
+    setSettings((prev) => ({
+      ...prev,
+      locationNames: {
+        ...(prev.locationNames || {}),
+        [countryCode.toUpperCase()]: value,
+      },
+    }));
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      await sitemapService.saveSettings(settings);
+      push({
+        type: "success",
+        title: "Settings saved",
+        description: "Sitemap page settings updated successfully.",
+      });
+    } catch (error) {
+      push({
+        type: "error",
+        title: "Save failed",
+        description: getApiErrorMessage(error, "Could not save sitemap settings."),
+      });
+    }
+  };
+
+  if (loading) {
     return (
-        <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
-            <Header title="Sitemap" showBack={false} onBackClick={() => {}} />
-
-            <div className="mt-[20px]">
-                <div className={sectionClass}>
-                    <h3 className={sectionTitleClass}>Page Configuration</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
-                        <Dropdown
-                            label="Category Tab"
-                            value={selectedSection?.categoryId ?? "buy"}
-                            options={SITEMAP_CATEGORIES.map((c) => ({ value: c.id, label: c.label }))}
-                            onChange={(v) => updateSection("categoryId", v)}
-                        />
-                        <TextField
-                            label="Location"
-                            value={selectedSection?.location ?? ""}
-                            onChange={(v) => updateSection("location", v)}
-                            placeholder="Umm Al Quwain"
-                        />
-                        <div className="md:col-span-2">
-                            <TextField
-                                label="Section Title"
-                                value={selectedSection?.title ?? ""}
-                                onChange={(v) => updateSection("title", v)}
-                            />
-                        </div>
-                        <Toggle
-                            label="Section Status"
-                            checked={selectedSection?.isActive ?? true}
-                            onChange={(v) => updateSection("isActive", v)}
-                        />
-                    </div>
-                    <p className="text-[13px] text-[#707070] mt-[12px]">
-                        User-side page title format: &quot;For [Category] properties sitemap in [Location]&quot;
-                    </p>
-                </div>
-
-                <div className={sectionClass}>
-                    <h3 className={sectionTitleClass}>Sitemap Links (3-column layout)</h3>
-                    {selectedSection?.links.map((link) => (
-                        <div key={link.id} className="border border-[#EAEAEA] rounded-[10px] p-[14px] mb-[10px]">
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-[12px]">
-                                <TextField label="Link Label" value={link.label} onChange={(v) => updateLink(link.id, "label", v)} />
-                                <TextField label="URL" value={link.url} onChange={(v) => updateLink(link.id, "url", v)} />
-                                <Dropdown
-                                    label="Column"
-                                    value={String(link.column)}
-                                    options={[
-                                        { value: "1", label: "Column 1" },
-                                        { value: "2", label: "Column 2" },
-                                        { value: "3", label: "Column 3" },
-                                    ]}
-                                    onChange={(v) => updateLink(link.id, "column", Number(v))}
-                                />
-                                <TextField
-                                    label="Display Order"
-                                    value={String(link.displayOrder)}
-                                    onChange={(v) => updateLink(link.id, "displayOrder", Number(v) || 0)}
-                                    type="number"
-                                />
-                            </div>
-                        </div>
-                    ))}
-                    <button type="button" className="text-[13px] font-[Bold] text-[#6A3CA8] cursor-pointer">+ Add Link</button>
-                </div>
-
-                <div className={sectionClass}>
-                    <h3 className={sectionTitleClass}>Sections List</h3>
-                    <div className="flex flex-wrap gap-[8px]">
-                        {sections.map((s) => (
-                            <button
-                                key={s.id}
-                                type="button"
-                                onClick={() => setSelectedSectionId(s.id)}
-                                className={`px-[14px] py-[8px] rounded-[8px] text-[13px] font-[Medium] cursor-pointer ${selectedSectionId === s.id ? "bg-[#6A3CA8] text-white" : "bg-[#F5F5F5] text-[#222]"}`}
-                            >
-                                {s.title} — {SITEMAP_CATEGORIES.find((c) => c.id === s.categoryId)?.label}
-                            </button>
-                        ))}
-                        <button type="button" className="px-[14px] py-[8px] rounded-[8px] text-[13px] font-[Bold] text-[#6A3CA8] border border-[#6A3CA8] cursor-pointer">
-                            + Add Section
-                        </button>
-                    </div>
-                </div>
-
-                <SaveBar onSave={() => console.log("Save Sitemap", sections)} />
-            </div>
-        </div>
+      <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8 flex justify-center py-[80px]">
+        <Loader size={80} />
+      </div>
     );
+  }
+
+  const defaultCountry = settings.defaultCountryCode || "AE";
+
+  return (
+    <div className="px-4 pb-6 pt-4 sm:px-6 lg:px-8">
+      <Header title="Sitemap" showBack={false} onBackClick={() => {}} />
+
+      <div className="mt-[20px]">
+        <div className={sectionClass}>
+          <h3 className={sectionTitleClass}>Page Settings</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px]">
+            <TextField
+              label="Page Title"
+              value={settings.pageTitle || ""}
+              onChange={(value) => updateSettings("pageTitle", value)}
+            />
+            <TextField
+              label="Breadcrumb Home Label"
+              value={settings.breadcrumbHomeLabel || ""}
+              onChange={(value) => updateSettings("breadcrumbHomeLabel", value)}
+            />
+            <TextField
+              label="Breadcrumb Label"
+              value={settings.breadcrumbLabel || ""}
+              onChange={(value) => updateSettings("breadcrumbLabel", value)}
+            />
+            <Dropdown
+              label="Default Country"
+              value={defaultCountry}
+              options={countryOptions.length ? countryOptions : [{ value: "AE", label: "UAE" }]}
+              onChange={(value) => updateSettings("defaultCountryCode", value)}
+            />
+            <TextField
+              label="Location Name (page title)"
+              value={settings.locationNames?.[defaultCountry.toUpperCase()] || ""}
+              onChange={(value) => updateLocationNameForCountry(defaultCountry, value)}
+              placeholder="Umm Al Quwain"
+            />
+          </div>
+          <SaveBar onSave={() => void handleSaveSettings()} />
+        </div>
+
+        <div className={sectionClass}>
+          <h3 className={sectionTitleClass}>Content by Location</h3>
+          <p className="text-[13px] text-[#707070] mb-[16px]">
+            Add sitemap categories per location using + Add category. Empty categories are hidden
+            on the public site.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-[16px] mb-[8px]">
+            <Dropdown
+              label="Location (Country)"
+              value={filterCountry}
+              options={countryOptions.length ? countryOptions : [{ value: "AE", label: "UAE" }]}
+              onChange={setFilterCountry}
+            />
+          </div>
+
+          <SitemapCategorySection
+            key={filterCountry}
+            countryCode={filterCountry}
+            documents={documents}
+            onSaved={() => setRefreshKey((key) => key + 1)}
+          />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default SitemapSettings;

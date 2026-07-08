@@ -61,6 +61,22 @@ export interface TeamMember {
     isActive: boolean;
 }
 
+export interface TestimonialSectionSettings {
+    sectionTitle: string;
+    sectionSubtitle: string;
+}
+
+export interface TestimonialItem {
+    id: string;
+    name: string;
+    title: string;
+    content: string;
+    image: string;
+    rating: number | null;
+    displayOrder: number;
+    isActive: boolean;
+}
+
 export interface ContactPageSettings {
     heroTitle: string;
     heroSubtitle: string;
@@ -311,6 +327,25 @@ export const defaultTeamPageSettings: TeamPageSettings = {
     pageSubtitle: "Meet the people behind Property Finder",
     itemsPerPage: 24,
     seo: { metaTitle: "Our Team | Property Finder", metaDescription: "Meet our team", metaKeywords: "team, property finder" },
+};
+
+export const defaultTestimonialSettings: TestimonialSectionSettings = {
+    sectionTitle: "Don't take our word for it!",
+    sectionSubtitle: "Hear it from our customers",
+};
+
+export const BANNER_PLACEMENT_OPTIONS = [
+    { value: "listing-page", label: "Property Listing Page" },
+    { value: "project-page", label: "Project Listing Page" },
+    { value: "search-page", label: "Search Page" },
+    { value: "home-page", label: "Home Page" },
+    { value: "agent-page", label: "Agent Page" },
+    { value: "agency-page", label: "Agency Page" },
+];
+
+export const defaultBannerSettings = {
+    defaultButtonText: "Explore more",
+    autoSlideInterval: 5000,
 };
 
 export const defaultContactPageSettings: ContactPageSettings = {

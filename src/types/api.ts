@@ -753,6 +753,8 @@ export type SupportedUrlsResponse = {
     agentUrl?: { img?: string; doc?: string };
     blogUrl?: { img?: string; vid?: string; doc?: string };
     teamUrl?: { img?: string; vid?: string; doc?: string };
+    testimonialUrl?: { img?: string; vid?: string; doc?: string };
+    bannerUrl?: { img?: string; vid?: string; doc?: string };
   };
 };
 
@@ -887,6 +889,30 @@ export type LegalAdminResponse = {
   documents: LegalDocumentRecord[];
 };
 
+export type SitemapPageSettings = {
+  breadcrumbHomeLabel?: string;
+  breadcrumbLabel?: string;
+  pageTitle?: string;
+  defaultCountryCode?: string;
+  locationNames?: Record<string, string>;
+};
+
+export type SitemapDocumentRecord = {
+  id?: string;
+  countryCode?: string;
+  categoryName: string;
+  slug?: string;
+  content?: string;
+  isActive?: boolean;
+  displayOrder?: number;
+};
+
+export type SitemapAdminResponse = {
+  settings: SitemapPageSettings;
+  countries: CountryRecord[];
+  documents: SitemapDocumentRecord[];
+};
+
 export type AboutSeoFields = {
   metaTitle?: string;
   metaDescription?: string;
@@ -991,9 +1017,9 @@ export type ContactAdminResponse = {
 };
 
 export type TeamSeoFields = {
-  metaTitle?: string;
-  metaDescription?: string;
-  metaKeywords?: string;
+  metaTitle: string;
+  metaDescription: string;
+  metaKeywords: string;
 };
 
 export type TeamPageSettings = {
@@ -1026,6 +1052,74 @@ export type TeamAdminResponse = {
   members: TeamMemberRecord[];
   member?: TeamMemberRecord | null;
   pagination: TeamPagination;
+  mediaBaseUrl?: { img?: string };
+};
+
+export type TestimonialSectionSettings = {
+  sectionTitle?: string;
+  sectionSubtitle?: string;
+};
+
+export type TestimonialRecord = {
+  id: string;
+  name: string;
+  title: string;
+  content: string;
+  image: string;
+  rating: number | null;
+  displayOrder: number;
+  isActive: boolean;
+};
+
+export type TestimonialPagination = {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+};
+
+export type TestimonialAdminResponse = {
+  settings: TestimonialSectionSettings;
+  testimonials: TestimonialRecord[];
+  testimonial?: TestimonialRecord | null;
+  pagination: TestimonialPagination;
+  mediaBaseUrl?: { img?: string };
+};
+
+export type BannerSettings = {
+  defaultButtonText?: string;
+  autoSlideInterval?: number;
+};
+
+export type BannerRecord = {
+  id: string;
+  title: string;
+  description: string;
+  image: string;
+  mobileImage: string;
+  link: string;
+  linkText: string;
+  placement: string;
+  position: string;
+  displayOrder: number;
+  startDate: string | null;
+  endDate: string | null;
+  isActive: boolean;
+};
+
+export type BannerPagination = {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+};
+
+export type BannerAdminResponse = {
+  settings: BannerSettings;
+  placements: string[];
+  banners: BannerRecord[];
+  banner?: BannerRecord | null;
+  pagination: BannerPagination;
   mediaBaseUrl?: { img?: string };
 };
 
